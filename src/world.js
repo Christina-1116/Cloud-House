@@ -203,7 +203,8 @@ function canPlace(f, x, z) {
 const toWorld = (f, lx, lz) => { const a = f.r * D2R, c = Math.cos(a), s = Math.sin(a); return [f.x + lx * c + lz * s, f.z - lx * s + lz * c]; };
 function refreshLamps() {
   const spots = [...fixedLamps]; for (const f of furn) if (f.b.light) spots.push({ p: f.b.light.p.clone().applyMatrix4(f.b.g.matrixWorld), color: f.b.light.color });
-  lampPool.forEach((l, i) => { const s = spots[i]; l.userData.on = !!s; if (s) { l.position.copy(s.p); l.color.set(s.color); } else l.position.set(HX / 2, -40, HZ / 2); });   // an unused light must never sit on a surface: a zero-length light vector turns into NaN and bloom spreads it over the whole frame applyLights();
+  lampPool.forEach((l, i) => { const s = spots[i]; l.userData.on = !!s; if (s) { l.position.copy(s.p); l.color.set(s.color); } else l.position.set(HX / 2, -40, HZ / 2); });   // an unused light must never sit on a surface: a zero-length light vector turns into NaN and bloom spreads it over the whole frame
+  applyLights();
 }
 
 /* ═════════════ walk grid + path finding ═════════════ */

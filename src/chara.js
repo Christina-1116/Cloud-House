@@ -7,8 +7,8 @@ const CHARS = [
   { id: 'ju', n: '橘子', tag: '元气，爱打招呼', he: '她', hair: '#e8752c', style: 'bob', eye: '#8a4a20', mouth: 'open', hat: 'bucket', top: CREAM, ov: '#ee7a34', bot: '#ee7a34', pom: null, acc: null, voice: '爽朗直接，爱笑，喜欢给人打气' },
   { id: 'li', n: '栗子', tag: '慢性子，爱喝热的', he: '他', hair: BROWN, style: 'boy', eye: '#8a5a34', mouth: 'smile', hat: 'acorn', top: CREAM, ov: SAGE, bot: SAGE, pom: null, acc: null, voice: '慢悠悠的，爱喝热饮，说话像在烤火' },
   { id: 'man', n: '小满', tag: '爱做饭，爱云', he: '她', hair: BROWN, style: 'bun', eye: '#8a5236', mouth: 'open', hat: 'clip', top: CREAM, ov: SAGE, bot: SAGE, pom: null, acc: null, voice: '活泼爱笑，喜欢分享吃的，语气里带感叹' },
-  { id: 'xia', n: '知夏', tag: '安静，爱看书', he: '她', hair: BROWN, style: 'neat', eye: '#6a4a34', mouth: 'smile', hat: 'bear', top: CREAM, ov: null, bot: '#d9c7a6', pom: null, acc: 'glasses', voice: '温柔安静，说话像写信，喜欢引用书里的句子' },
-  { id: 'yun', n: '团团', tag: '一朵会走路的云', he: '它', body: 'cloud', hair: '#ffffff', eye: '#5a4030', mouth: 'w', hat: 'straw', top: '#ffffff', ov: null, bot: '#ffffff', acc: 'scarf', voice: '软乎乎的小云朵，说话很短，喜欢用“呼”“噗”这样的语气词' },
+  { id: 'xia', n: '知遥', tag: '安静，爱看书', he: '她', hair: BROWN, style: 'neat', eye: '#6a4a34', mouth: 'smile', hat: 'bear', top: CREAM, ov: null, bot: '#d9c7a6', pom: null, acc: 'glasses', voice: '温柔安静，说话像写信，喜欢引用书里的句子' },
+  { id: 'yun', n: '雪球', tag: '一朵会走路的云', he: '它', body: 'cloud', hair: '#ffffff', eye: '#5a4030', mouth: 'w', hat: 'straw', top: '#ffffff', ov: null, bot: '#ffffff', acc: 'scarf', voice: '软乎乎的小云朵，说话很短，喜欢用“呼”“噗”这样的语气词' },
 ];
 const HATS = [
   { id: 'none', n: '不戴', price: 0 }, { id: 'beret', n: '小芽贝雷帽', price: 0 }, { id: 'bucket', n: '橘子渔夫帽', price: 0 }, { id: 'acorn', n: '橡果毛线帽', price: 0 }, { id: 'clip', n: '云朵发夹', price: 0 }, { id: 'bear', n: '小熊贝雷帽', price: 0 }, { id: 'straw', n: '草编小帽', price: 0 },

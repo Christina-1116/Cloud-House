@@ -10,7 +10,7 @@ function loadState() { try { const s = JSON.parse(localStorage.getItem(KEY)); if
 let state = loadState() || fresh();
 AU.on = state.sound !== false;
 let saveT = 0;
-function save() { clearTimeout(saveT); saveT = setTimeout(() => { state.furn = furn.map(f => ({ u: f.uid, k: f.k, x: +f.x.toFixed(3), z: +f.z.toFixed(3), r: f.r })); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } }, 300); }
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { state.furn = furn.map(f => ({ u: f.uid, k: f.k, x: +f.x.toFixed(3), z: +f.z.toFixed(3), r: f.r })); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { if (!state.saveWarned) { state.saveWarned = true; toast("浏览器暂时无法保存进度，请允许本地存储或先保留这一页。"); } } }, 300); }
 const LV = [0, 40, 120, 260, 480, 800, 1400, 2200], LVN = ['初识', '熟悉', '亲近', '默契', '家人', '挚友', '知己', '此生'];
 const level = () => LV.filter(x => state.aff >= x).length;
 function dayOf() { if (state.day.d !== today()) state.day = newDay(); return state.day; }
@@ -553,7 +553,7 @@ canvas.addEventListener('pointermove', e => {
 });
 function endPointer(e) {
   const d = edit.drag;
-  if (d && e.pointerId === d.id) { edit.drag = null; controls.enabled = true; if (d.moved) { if (!d.ok) { d.f.x = d.x0; d.f.z = d.z0; syncFurn(d.f); SFX.bad(); toast('这里放不下，换个位置'); } else SFX.place(); showRing(); tap = null; return; } }
+  if (d && e.pointerId === d.id) { edit.drag = null; controls.enabled = true; if (d.moved) { if (!d.ok) { d.f.x = d.x0; d.f.z = d.z0; syncFurn(d.f); SFX.bad(); toast('这里放不下，换个位置'); } else { SFX.place(); rebuildNav(); refreshLamps(); save(); } showRing(); tap = null; return; } }
   if (!tap || e.pointerId !== tap.id) return; const t = tap; tap = null; if (e.type !== 'pointerup' || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 7 || e.timeStamp - t.t > 600) return;
   if (edit.on) return selectF(pickFurn(e.clientX, e.clientY));
   const o = pick3(e.clientX, e.clientY);
@@ -590,7 +590,7 @@ async function boot() {
   renderChips(); renderWho(); refreshDots(); $('#btnSound').classList.toggle('off', !AU.on); backfillFoot(); bar.style.width = '90%'; await nextFrame(); renderer.compile(scene, camera); bar.style.width = '100%';
   let last = performance.now(), minuteT = 0, soT = rnd(50, 90);
   renderer.setAnimationLoop(now => {
-    const raw = (now - last) / 1000, dt = Math.min(.05, raw), time = now / 1000; last = now; watchPerf(raw); TWEEN.update(now);
+    const raw = (now - last) / 1000, dt = Math.min(.05, raw), time = now / 1000; last = now; if (voyage.on || document.hidden) return; watchPerf(raw); TWEEN.update(now);
     const lk = state.light === 'on' ? 1 : state.light === 'off' ? 0 : env.night > .4 ? 1 : 0; if (Math.abs(lk - lights.k) > .003) { lights.k += (lk - lights.k) * Math.min(1, dt * 3); applyLights(); }
     if (REF.tv.userData.sw) { REF.tv.emissive.setHSL((time * .07) % 1, .35, .6); REF.tv.emissiveIntensity = 1.2 + Math.sin(time * 9) * .15; }
     if (H.mode === 'auto' && !edit.on && !social.on) { auto.t -= dt; if (auto.t <= 0 && H.state === 'act' || auto.block !== blockAt(nowH())) autoPick(auto.t <= 0); }
@@ -602,11 +602,8 @@ async function boot() {
     followCam(dt); controls.update(); updateFloating(dt); if (!mini.on) composer.render();
   });
   await nextFrame(); await nextFrame(); $('#loader').classList.add('done'); setTimeout(() => $('#loader').remove(), 700);
-  if (state.first) {
-    state.first = false; modal(`<h2>欢迎搬进云端小屋</h2><p>这是一间漂在云上的空房子，现在只有一张床、一个灶台、一台冰箱和一个洗手台。先选一位住客：</p><div class="cards">${CHARS.map((c, i) => `<button class="card" data-pick="${i}" aria-pressed="${i === state.chara}"><img src="${ART[c.id]}" alt=""><b>${c.n}</b><span>${c.tag}</span></button>`).join('')}</div><p>点家具上冒出的 ★ 泡泡攒星星币，去“商店”一件一件把家填满；点“玩”可以做饭、钓鱼赚得更快。左上角的“下一步”会告诉你接下来做什么。</p><div class="acts"><button class="btn" data-close>搬进去</button></div>`, m => { m.addEventListener('click', e => { if (e.target.closest('[data-close]')) setTimeout(() => say(persOf(state.chara).empty, 6), 700); const t = e.target.closest('[data-pick]'); if (!t) return; audioStart(); setChara(+t.dataset.pick); m.querySelectorAll('[data-pick]').forEach(b => b.setAttribute('aria-pressed', b === t)); }); });
-  }
-  renderWho(); save(); checkGoals();
+  renderWho(); state.first = false; save(); checkGoals(); initJourney();
 }
-if (location.protocol === 'file:') window.__home = { get state() { return state; }, sim(n) { let t = performance.now() / 1000; for (let i = 0; i < n; i++) { t += .05; updateHero(.05, t); updateMate(.05, t); updatePet(.05, t); updateSpacing(.05); tickSocial(.05, t); tickGift(.05, t); updateFloating(.05); } }, mini, startMini, endMini, closeMini, bloom, composer, renderer, scene, drift, wideDist, meteor, moon, stars, confetti, steam, clouds, THREE, gift, houseRoot, checkGoals, grantMemo, charaNote, openEvent, EVENTS, GOALS, FISH, BB, bubble, bubbleM, say, sayM, applyWeather, setEv(e) { evPend = e; }, get wx() { return wx; }, MM, social, startSocial, setMate, makeDiary, localDiary, openGift, G_, MT_, gift, mateR, H, P, hero, petR, goAct, ACTS, furn, CAT, edit, setEdit, selectF, camera, controls, toScreen, view, env, addAff, addCoins, findPath, nearestFree, toWorld, hostOf, getItem, canPlace, warp(id) { state.aff = Math.max(state.aff, 300); if (!goAct(id)) return false; const a = ACTS[id], f = toWorld(hostOf(a), ...(a.lf || a.lp)), w = toWorld(hostOf(a), ...a.lp), c = nearestFree(f[0], f[1]); hero.root.position.set((c[0] + .5) * .2, 0, (c[1] + .5) * .2); H.path = []; controls.target.set(w[0], .7, w[1]); camera.position.copy(controls.target).addScaledVector(new THREE.Vector3(1, .98, 1.08).normalize(), 7); view.pause = 1e12; return true; } };
-boot().catch(err => { console.error(err); $('#loadMsg').textContent = '加载出错了：' + err.message; });
+if (location.protocol === 'file:' || new URLSearchParams(location.search).has('test')) window.__home = { get state() { return state; }, voyage, jRoom, jProgress, jTravel, jApply, jRender, jEnter, jHome, jStartGame, jGameFinish, save, sim(n) { let t = performance.now() / 1000; for (let i = 0; i < n; i++) { t += .05; updateHero(.05, t); updateMate(.05, t); updatePet(.05, t); updateSpacing(.05); tickSocial(.05, t); tickGift(.05, t); updateFloating(.05); } }, mini, startMini, endMini, closeMini, bloom, composer, renderer, scene, drift, wideDist, meteor, moon, stars, confetti, steam, clouds, THREE, gift, houseRoot, checkGoals, grantMemo, charaNote, openEvent, EVENTS, GOALS, FISH, BB, bubble, bubbleM, say, sayM, applyWeather, setEv(e) { evPend = e; }, get wx() { return wx; }, MM, social, startSocial, setMate, makeDiary, localDiary, openGift, G_, MT_, gift, mateR, H, P, hero, petR, goAct, ACTS, furn, CAT, edit, setEdit, selectF, camera, controls, toScreen, view, env, addAff, addCoins, findPath, nearestFree, toWorld, hostOf, getItem, canPlace, warp(id) { state.aff = Math.max(state.aff, 300); if (!goAct(id)) return false; const a = ACTS[id], f = toWorld(hostOf(a), ...(a.lf || a.lp)), w = toWorld(hostOf(a), ...a.lp), c = nearestFree(f[0], f[1]); hero.root.position.set((c[0] + .5) * .2, 0, (c[1] + .5) * .2); H.path = []; controls.target.set(w[0], .7, w[1]); camera.position.copy(controls.target).addScaledVector(new THREE.Vector3(1, .98, 1.08).normalize(), 7); view.pause = 1e12; return true; } };
+boot().catch(err => { console.error(err); if ($('#loadMsg')) $('#loadMsg').textContent = '加载出错了：' + err.message; });
 </script>

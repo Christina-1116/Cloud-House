@@ -1,0 +1,12 @@
+{
+  "name": "cloud-house",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Cloud House — a slow living adventure in ten retreats",
+  "scripts": {
+    "build": "sh src/build.sh",
+    "test": "node --test tests/*.test.mjs",
+    "start": "python3 -m http.server 4173 --bind 127.0.0.1",
+    "test:browser": "node tests/browser.cjs"
+  }
+}
