@@ -7,6 +7,10 @@
     "build": "sh src/build.sh",
     "test": "node --test tests/*.test.mjs",
     "start": "python3 -m http.server 4173 --bind 127.0.0.1",
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs",
+    "test:offline": "node tests/offline.cjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

@@ -6,7 +6,11 @@
 
 ## 运行
 
-不需要安装产品依赖。需要 Python 3，用本地服务打开：
+**下载解压后，直接双击 `index.html` 即可开始游戏。** 不需要安装 Python、Node.js 或其他软件，也不需要启动服务或连接网络。建议使用支持 WebGL 的 Chrome、Edge、Safari 或 Firefox。
+
+所有图片与 3D 运行代码都已嵌入 `index.html`，这个文件可以单独复制到其他文件夹或设备。源码仓库中的 `public/` 是构建输入，玩家运行时不再需要它。中文字体使用设备上的字体。原有可选的 Claude 回信能力仍可在支持它的宿主使用；普通浏览器走本地模板。
+
+开发预览也可以使用本地 HTTP 服务：
 
 ```sh
 npm start
@@ -14,9 +18,7 @@ npm start
 python3 -m http.server 4173 --bind 127.0.0.1
 ```
 
-浏览器访问 `http://127.0.0.1:4173`。建议使用支持 WebGL 的 Chrome、Edge、Safari 或 Firefox。由于 ES modules 的本地文件限制，请使用 HTTP 服务，不要直接双击 `index.html`。
-
-`index.html` 和整个 `public/` 文件夹必须一起保留。图片、three.js 与 tween.js 都在本地，正常游玩不需要 CDN、账号或 AI API。中文字体使用设备上的字体。原有可选的 Claude 回信能力仍可在支持它的宿主使用；普通浏览器走本地模板。
+浏览器访问 `http://127.0.0.1:4173`。这是当前电脑的地址，服务关闭后链接就无法访问。开发预览需保留服务终端；日常试玩推荐直接打开下载包的 `index.html`。
 
 ## 怎么玩
 
@@ -35,11 +37,13 @@ python3 -m http.server 4173 --bind 127.0.0.1
 ## 构建与验证
 
 ```sh
+npm ci
 npm run build
 npm test
+python3 scripts/package.py
 ```
 
-构建需要 Python 3 与 Node.js，不需要 npm install。`scripts/build.py` 合并源码，`src/build.sh` 运行 JS 语法校验。`index.html` 为提交的可玩构建产物；`public/vendor` 包含固定版本运行依赖与其许可证。
+仅开发者重新构建时需要 Python 3、Node.js 和 esbuild 开发依赖。`scripts/build.py` 合并源码与图片，`scripts/bundle.cjs` 将本地 3D 模块打包为内联脚本，`src/build.sh` 运行 JS 语法校验。`index.html` 为提交的独立可玩构建产物；`public/vendor` 保留固定版本依赖与许可证。
 
 真实浏览器回归需要 Playwright 和 Chromium。在一个终端运行 `npm start`，另一个终端运行：
 
@@ -47,9 +51,12 @@ npm test
 npm install --no-save playwright
 npx playwright install chromium
 npm run test:browser
+npm run test:offline
+# 可选：安装对应的 Playwright WebKit 后验证 Mac 浏览器引擎
+TEST_BROWSER=webkit npm run test:offline
 ```
 
-测试自动完成十个房间、四种游戏、结局、照片下载、刷新恢复、奖励家具取出与手机布局。测试报告和截图写到忽略的 `qa/`。也可以用 `PLAYWRIGHT_MODULE` 指定已有 Playwright 安装路径，用 `TEST_URL` 指定预览地址。
+浏览器测试自动完成十个房间、四种游戏、结局、照片下载、刷新恢复、奖励家具取出与手机布局。离线测试将首页单独复制到没有 `public/` 的临时文件夹，阻止其他资源请求，验证直接打开、图片、照片下载、存档和 3D 小屋。测试报告和截图写到忽略的 `qa/`。也可以用 `PLAYWRIGHT_MODULE` 指定已有 Playwright 安装路径，用 `TEST_URL` 指定 HTTP 预览地址或完整 `file:///…/index.html` 文件地址。
 
 ## 源码
 

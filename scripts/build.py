@@ -1,23 +1,33 @@
-"""Build the existing module composition without introducing a bundler."""
+"""Build a standalone HTML game that also works when opened as a local file."""
+import base64
+import json
 import pathlib
 import re
+import subprocess
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SRC = ROOT / 'src'
 head = (SRC / 'head.html').read_text()
 head = head.replace('</style>', (SRC / 'journey.css').read_text() + '\n</style>', 1)
 head = head.replace('<div class="toast"', (SRC / 'journey.html').read_text() + '\n<div class="toast"', 1)
-head = head.replace('https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js', './public/vendor/three/three.module.js')
-head = head.replace('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/', './public/vendor/three/addons/')
-head = head.replace('https://cdn.jsdelivr.net/npm/@tweenjs/tween.js@23.1.3/dist/tween.esm.js', './public/vendor/tween/tween.esm.js')
+head = re.sub(r'<script type="importmap">.*?</script>', '', head, flags=re.S)
 head = re.sub(r'<link[^>]+href="https://fonts\.[^"]+"[^>]*>\n?', '', head)
+art = {p.name: 'data:image/webp;base64,' + base64.b64encode(p.read_bytes()).decode('ascii')
+       for p in sorted((ROOT / 'public/art').glob('*.webp'))}
 model = re.sub(r'^export ', '', (SRC / 'journey-model.mjs').read_text(), flags=re.M)
 game = (SRC / 'game.js').read_text().replace('/*__PLAY__*/', (SRC / 'play.js').read_text() + '\n' + model + '\n' + (SRC / 'journey.js').read_text())
-parts = [head, '<script type="module">']
+parts = [head, '<script type="module">', 'const JOURNEY_ART = ' + json.dumps(art) + ';']
 parts += [(SRC / name).read_text() for name in ['assets.js', 'core.js', 'world.js', 'chara.js']]
 parts += [game]
 body = '\n'.join(parts)
 module = re.search(r'<script type="module">(.*?)</script>', body, re.S).group(1)
 (SRC / 'check.mjs').write_text(module)
+bundle = subprocess.run(['node', str(ROOT / 'scripts/bundle.cjs')], input=module,
+                        text=True, capture_output=True, check=True).stdout
+# HTML parsers terminate script blocks even when the marker is in a JS string.
+bundle = re.sub(r'</script', r'<\\/script', bundle, flags=re.I)
+licenses = '\n\n'.join((ROOT / f'public/vendor/{library}/LICENSE').read_text()
+                         for library in ['three', 'tween'])
+body = head + '\n<!-- Third-party license notices:\n' + licenses + '\n-->\n<script>\n' + bundle + '\n</script>'
 output = '''<!doctype html>
 <html lang="zh-CN">
 <head>

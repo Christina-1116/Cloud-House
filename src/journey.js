@@ -1,10 +1,10 @@
 /* Cloud voyage. The artwork is an interactive storybook, the 3D home remains editable. */
 state.journey = restoreJourney(state.journey);
 const voyage = { on: false, game: null, raf: 0, timers: [], focus: null, focusSelector: null, modalKind: '', modalVersion: 0, ready: false, photos: new Map() };
-const J_ART = n => `public/art/scene-${String(n).padStart(2, '0')}.webp`;
-const J_THUMB = n => `public/art/thumb-${String(n).padStart(2, '0')}.webp`;
+const J_ART = n => JOURNEY_ART[`scene-${String(n).padStart(2, '0')}.webp`];
+const J_THUMB = n => JOURNEY_ART[`thumb-${String(n).padStart(2, '0')}.webp`];
 const J_PORTRAITS = [12, 13, 11, 14, 15, 16];
-const J_HOST_ART = n => `public/art/resident-${J_PORTRAITS[n]}.webp`;
+const J_HOST_ART = n => JOURNEY_ART[`resident-${J_PORTRAITS[n]}.webp`];
 const jRoom = () => JOURNEY_ROOMS.find(r => r.id === state.journey.room) || JOURNEY_ROOMS[0];
 const jProgress = () => state.journey.rooms[jRoom().id] || { found: [], marks: [], choice: null, best: 0, postcard: false };
 const jEscape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -58,7 +58,7 @@ function jRender() {
   if (art.getAttribute('src') !== J_ART(r.art)) {
     art.style.opacity = '.2'; $('#jImageStatus').hidden = false; $('#jImageStatus').textContent = '正穿过这一片云……';
     art.onload = () => { art.style.opacity = '1'; $('#jImageStatus').hidden = true; };
-    art.onerror = () => { art.style.opacity = '1'; $('#jImageStatus').hidden = false; $('#jImageStatus').textContent = '这一站的画面暂时没加载好。可以切到其他房间再回来，或检查 public/art 文件夹是否完整。'; };
+    art.onerror = () => { art.style.opacity = '1'; $('#jImageStatus').hidden = false; $('#jImageStatus').textContent = '这一站的画面暂时没加载好。可以切到其他房间再回来，或重新打开完整的游戏文件。'; };
     art.src = J_ART(r.art); art.alt = `${r.n}，${r.mood}的云上小屋，寻找三个发光的小物件`;
   }
   $('#jHotspots').innerHTML = r.clues.map((clue,i) => `<button class="j-hotspot ${p.found.includes(i)?'found':''}" data-j="clue" data-clue="${i}" style="left:${clue.x}%;top:${clue.y}%" aria-label="${jEscape(clue.n)}${p.found.includes(i)?'，已发现':''}"><span>${p.found.includes(i)?'✓':'✧'}</span><em>${clue.n}</em></button>`).join('');
@@ -154,7 +154,7 @@ async function jPhoto(id = jRoom().id) {
 }
 function jCoins() {
   const r=jRoom();
-  jOpen(`<div class="j-dialog-kicker">LITTLE TREASURES FOR YOUR HOME</div><h2>把风景，带一点回家。</h2><div class="j-furniture"><img src="public/art/furniture-${r.furniture}.webp" alt="${r.n}的家具风格参考"><p>你有 <b>${state.coins}</b> 枚星星币。<br><br>首次发现小物、完成游戏和听完故事，都能收下星星币。完成一站，还会得到一件真正可以放进 3D 小屋的家具。<br><br>这张图片是本房间的风格收藏页。</p></div><div class="j-actions"><button class="j-secondary" data-j="close">继续旅居</button><button class="j-primary" data-j="home">回家布置家具</button></div>`, 'coins');
+  jOpen(`<div class="j-dialog-kicker">LITTLE TREASURES FOR YOUR HOME</div><h2>把风景，带一点回家。</h2><div class="j-furniture"><img src="${JOURNEY_ART[`furniture-${r.furniture}.webp`]}" alt="${r.n}的家具风格参考"><p>你有 <b>${state.coins}</b> 枚星星币。<br><br>首次发现小物、完成游戏和听完故事，都能收下星星币。完成一站，还会得到一件真正可以放进 3D 小屋的家具。<br><br>这张图片是本房间的风格收藏页。</p></div><div class="j-actions"><button class="j-secondary" data-j="close">继续旅居</button><button class="j-primary" data-j="home">回家布置家具</button></div>`, 'coins');
 }
 
 /* Ritual games share lifecycle and accessibility, but have different rules and decisions. */

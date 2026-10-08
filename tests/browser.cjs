@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const BASE = process.env.TEST_URL || 'http://127.0.0.1:4173';
+const TARGET = BASE.startsWith('file:') ? `${BASE}?test=1` : `${BASE}/?test=1`;
 const output = process.env.QA_DIR || path.resolve('qa');
 fs.mkdirSync(output, { recursive: true });
 (async () => {
@@ -14,7 +15,7 @@ fs.mkdirSync(output, { recursive: true });
     page.on('pageerror', e => failures.push(e.message));
     page.on('response', r => { if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`); });
     await page.route('https://**/*', route => { failures.push(`Unexpected external request ${route.request().url()}`); return route.abort(); });
-    await page.goto(`${BASE}/?test=1`);
+    await page.goto(TARGET);
     await page.waitForFunction(() => window.__home?.voyage.ready, { timeout: 60000 });
     await page.locator('[data-j="begin"]').click();
     await page.waitForFunction(() => !document.querySelector('#loader'));
@@ -170,7 +171,7 @@ fs.mkdirSync(output, { recursive: true });
     await check('legacy saves with no journey field restore existing furniture and currency', async () => {
       const legacy = await browser.newPage({viewport:{width:1280,height:800}});
       await legacy.addInitScript(() => localStorage.setItem('cloudhome.v3', JSON.stringify({ v: 3, coins: 777, aff: 120, day: {d: new Date().toLocaleDateString('en-CA'), claimed: []}, furn: [{u:'bed',k:'bed',x:8.55,z:1.12,r:0}], chara: 2 })));
-      await legacy.goto(`${BASE}/?test=1`);await legacy.waitForFunction(()=>window.__home?.voyage.ready);
+      await legacy.goto(TARGET);await legacy.waitForFunction(()=>window.__home?.voyage.ready);
       assert.equal(await legacy.evaluate(()=>window.__home.state.coins),777);
       assert.equal(await legacy.evaluate(()=>window.__home.state.chara),2);
       assert.equal(await legacy.evaluate(()=>window.__home.furn.filter(f=>f.uid==='bed').length),1);
