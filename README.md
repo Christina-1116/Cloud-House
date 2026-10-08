@@ -28,6 +28,7 @@ python3 -m http.server 4173 --bind 127.0.0.1
 - **旅居邮票**：探索、仪式、故事三枚印章齐全后获得一张邮票、80 星星币与一件 3D 家具。奖励只发一次，重复游玩可以改善最好成绩。
 - **云端晚会**：收齐五张邮票后可参加，首次获得 300 星星币与花环；十张邮票组成完整旅居册。
 - **3D 小屋**：可以旋转视角、购买/拖动/旋转家具、换住客和宠物、做饭、钓鱼、弹琴、写信。旅居家具在“商店 → 背包”取出。
+- **九种小猫**：进入“我的 3D 小屋 → 住客 → 宠物”，可选择云绒、橘座、煤球、花花、奶糖、暹罗、布偶、金渐层、墨墨。参考图用于选择卡，屋内与可旋转预览使用按参考特征制作的真实三维模型，包含各自花纹、蓝/金眼睛、短/长毛、爪子和尾巴；活动时会眨眼、呼吸、摇尾巴。选择自动保存，原有豆包和汤圆两只小狗保留。
 - **照片**：可将场景制作成 PNG 明信片保存。旅居册收藏的是游戏进度，照片保存到设备。
 
 存档沿用 `cloudhome.v3`，旧住客、货币、家具与亲密度保留。新增旅居进度放在同一存档的 `journey` 字段中。进度保存在当前浏览器、当前站点来源的本地存储，换浏览器或部署域名不会自动迁移。
@@ -52,6 +53,7 @@ npm install --no-save playwright
 npx playwright install chromium
 npm run test:browser
 npm run test:offline
+npm run test:pets
 # 可选：安装对应的 Playwright WebKit 后验证 Mac 浏览器引擎
 TEST_BROWSER=webkit npm run test:offline
 ```
@@ -66,7 +68,10 @@ TEST_BROWSER=webkit npm run test:offline
 | `src/journey.js` | 旅居面板、故事、四个小游戏、照片、3D 小屋衔接 |
 | `src/journey.html` / `src/journey.css` | 绘本旅居界面与响应式布局 |
 | `src/core.js` / `world.js` / `chara.js` | 原有 3D 场景、软质家具、角色、灯光与音效 |
+| `src/pets-model.mjs` / `pets-3d.js` | 九猫两狗的定义、旧宠物存档兼容、实体毛发与三维猫模型 |
+| `src/pets-ui.js` / `pets.css` | 九宫格选猫、实际模型可旋转预览、响应式布局 |
 | `src/game.js` / `play.js` | 原有生活系统、存档、家具编辑和四个小游戏 |
 | `scripts/prepare_art.py` | 从原始 25 张 PNG 导出 WebP（仅需在替换素材时运行，依赖 Pillow） |
+| `scripts/prepare_pets.py` | 将用户提供的猫咪参考九宫格压缩为 WebP，九格构图由运行时 CSS 完成 |
 
 参赛演示路线见 `docs/competition-demo.md`。游戏的新增场景是可互动的绘本画面；原有 3D 小屋保留模型与自由布置。家具素材图是风格图鉴，不是从图片自动生成的 3D 模型。

@@ -16,10 +16,6 @@ const HATS = [
 ];
 const ACCS = [{ id: 'none', n: '不带', price: 0 }, { id: 'pack', n: '小背包', price: 0 }, { id: 'glasses', n: '圆眼镜', price: 0 }, { id: 'scarf', n: '绿围巾', price: 0 }, { id: 'bow', n: '蝴蝶结', price: 100 }, { id: 'wings', n: '小翅膀', price: 320 }, { id: 'balloon', n: '气球', price: 160 }];
 const DYE = [CREAM, SAGE, '#ee7a34', '#e4a89c', '#a9cfd6', '#c9bfe6', '#f1d27a', '#b98d6f', '#8fb0c8', '#ffffff'];
-const PETS = [
-  { id: 'cat0', n: '奶盖', kind: 'cat', c: '#fbf3e6', c2: '#f1c9a6' }, { id: 'cat1', n: '橘座', kind: 'cat', c: '#f0a860', c2: '#fff3e2' }, { id: 'cat2', n: '煤球', kind: 'cat', c: '#6a6570', c2: '#f4f0ea' },
-  { id: 'dog0', n: '豆包', kind: 'dog', c: '#e2b47a', c2: '#fbf3e6' }, { id: 'dog1', n: '汤圆', kind: 'dog', c: '#fbf7f0', c2: '#e9d9c4' },
-];
 const eyeCache = new Map();
 function eyeMat(iris) {
   let m = eyeCache.get(iris); if (m) return m;
@@ -166,6 +162,8 @@ function setProp(rig, kind) {
   p.add(b.g);
 }
 function buildPet(rig, def) {
+  releasePetGeometry(rig);
+  if (def.kind === 'cat') return buildSoftCat(rig, def);
   if (rig.b) rig.body.remove(rig.b.g); const b = rig.b = new Builder(), g = b.g, c = PL(def.c), c2 = PL(def.c2), dog = def.kind === 'dog'; rig.body.add(g); g.scale.setScalar(1.15); rig.def = def;
   b.sph(.12, c, 0, .14, 0, .88, .82, 1.3); b.sph(.07, c2, 0, .11, .06, .8, .6, 1); const H = rig.head = grp(g, 0, .25, .15), hm = m => { H.add(m); m.position.sub(H.position); return m; };
   hm(b.sph(.105, c, 0, .25, .15, 1.05, .92, .95));

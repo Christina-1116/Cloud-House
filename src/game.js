@@ -8,6 +8,7 @@ const newDay = () => ({ d: today(), letter: 0, pat: 0, watch: 0, bub: 0, duo: 0,
 function fresh() { return { v: 3, chara: 0, pet: 0, theme: 0, time: 'auto', light: 'auto', amb: 'auto', sound: true, music: true, aff: 0, coins: 150, goal: 0, bought: 0, fish: {}, dishes: {}, mem: [], best: {}, plays: {}, pats: 0, perfect: 0, evDay: '', evLast: '', lastSeen: '', mailNew: false, saidHome: false, letters: [], foot: { d: '', list: [] }, day: { d: '' }, look: {}, ward: [], furn: null, bag: {}, uid: 1, mate: -1, diary: [], today: { d: '' }, first: true }; }
 function loadState() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 3) return { ...fresh(), ...s, first: false }; } catch { } return null; }
 let state = loadState() || fresh();
+state.pet = restorePetSelection(state); state.petId = PETS[state.pet].id;
 AU.on = state.sound !== false;
 let saveT = 0;
 function save() { clearTimeout(saveT); saveT = setTimeout(() => { state.furn = furn.map(f => ({ u: f.uid, k: f.k, x: +f.x.toFixed(3), z: +f.z.toFixed(3), r: f.r })); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { if (!state.saveWarned) { state.saveWarned = true; toast("浏览器暂时无法保存进度，请允许本地存储或先保留这一页。"); } } }, 300); }
@@ -141,6 +142,12 @@ function updatePet(dt, time) {
   const nap = P.state === 'nap' && H.act !== 'pet'; petR.body.scale.y += ((nap ? .72 : 1) - petR.body.scale.y) * Math.min(1, dt * 5);
   petR.body.position.y = (P.state === 'walk' ? Math.abs(Math.sin(P.walk)) * .025 : 0) + (petR.hop > 0 ? Math.sin(Math.min(petR.hop, 1) * PI) * .16 : 0); if (petR.hop > 0) { petR.hop += dt * 4.5; if (petR.hop >= 1) petR.hop = 0; }
   petR.tail.rotation.z = Math.sin(time * (nap ? 1.2 : petR.def.kind === 'dog' ? 9 : 3.2)) * .5; petR.head.rotation.z = Math.sin(time * .9) * .06;
+  if (petR.def.kind === 'cat') {
+    const blink = time % 5.7; const eyes = blink < .13 ? .1 + Math.abs(blink-.065)/.065*.9 : 1;
+    for (const eye of petR.eyes) eye.scale.y = nap ? .16 : eyes;
+    petR.paws.forEach((paw,i)=>{paw.rotation.x = P.state === 'walk' ? Math.sin(P.walk+(i%2)*PI)*.28 : 0;});
+    petR.body.scale.x = 1 + Math.sin(time*2)*.007; petR.body.scale.z = 1 + Math.sin(time*2)*.007;
+  }
 }
 const steam = (() => {
   const n = 16, p = new Float32Array(n * 3), c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
@@ -466,7 +473,7 @@ function renderSheet() {
     if (tab === 'c') h = `<div class="cards">${CHARS.map((c, i) => `<button class="card" data-chara="${i}" aria-pressed="${i === state.chara}"><img src="${ART[c.id]}" alt=""><b>${c.n}</b><span>${c.tag}</span></button>`).join('')}</div>`;
     if (tab === 'm' && !mateOK()) h = `<p class="note">家里现在只住得下一个人。把安家手册做到“家具达到 10 件”，就能请室友来同住了（现在 ${furn.length} 件）。</p>`;
     else if (tab === 'm') h = `<p class="note" style="margin:0 0 8px">请一位室友来同住。两个人会一起吃饭、看电视、睡一张床，还能聊天、击掌、猜拳、跳舞。</p><div class="cards"><button class="card" data-mate="-1" aria-pressed="${!hasMate()}"><span class="solo">一个人</span><b>一个人住</b><span>安安静静</span></button>${CHARS.map((c, i) => i === state.chara ? '' : `<button class="card" data-mate="${i}" aria-pressed="${hasMate() && i === state.mate}"><img src="${ART[c.id]}" alt=""><b>${c.n}</b><span>${c.tag}</span></button>`).join('')}</div>`;
-    if (tab === 'p') h = `<div class="cards">${PETS.map((c, i) => `<button class="card" data-pet="${i}" aria-pressed="${i === state.pet}"><img src="${c.thumb}" alt=""><b>${c.n}</b><span>${c.kind === 'cat' ? '小猫' : '小狗'}</span></button>`).join('')}</div>`;
+    if (tab === 'p') h = renderPetChoices();
     if (tab === 'd') {
       const item = (kind, x, cur) => `<button data-wear="${kind}" data-v="${x.id}" aria-pressed="${cur === x.id}">${x.n}${owns(x.id) ? '' : ` <em>★${x.price}</em>`}</button>`, sw = (kind, cur, none) => `<div class="dyes">${none ? `<button data-dye="${kind}" data-v="" aria-pressed="${cur == null}" class="none">无</button>` : ''}${DYE.map(d => `<button data-dye="${kind}" data-v="${d}" aria-pressed="${cur === d}" style="background:${d}" aria-label="颜色"></button>`).join('')}</div>`;
       h = `<p class="note" style="margin:0 0 4px">给${c.n}换装。带 ★ 的要用星星币买，买一次所有住客都能戴。</p><div class="sec">帽子</div><div class="opts">${HATS.map(x => item('hat', x, L.hat ?? c.hat)).join('')}</div><div class="sec">配饰</div><div class="opts">${ACCS.map(x => item('acc', x, L.acc ?? c.acc ?? 'none')).join('')}</div>${c.body === 'cloud' ? '' : `<div class="sec">上衣颜色</div>${sw('top', L.top || c.top)}<div class="sec">背带裤</div>${sw('ov', L.ov !== undefined ? L.ov : c.ov, true)}`}<div class="sec"></div><button class="btn alt" data-wear="reset">恢复${c.n}原本的样子</button>`;
@@ -490,6 +497,7 @@ function renderSheet() {
   }
   if (sheetName === 'play') h = playSheet(tab);
   $('#sheetB').innerHTML = h;
+  if (sheetName === 'char' && tab === 'p') mountPetPreview();
 }
 let resetArm = false;
 $('#sheetTabs').addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (!t) return; sheetTab[sheetName] = t.dataset.tab; SFX.click(); renderSheet(); });
@@ -508,7 +516,7 @@ $('#sheetB').addEventListener('click', e => {
   if ((t = e.target.closest('[data-mate]'))) { setMate(+t.dataset.mate); renderSheet(); return; }
   if ((t = e.target.closest('[data-diary]'))) return openDiary(+t.dataset.diary);
   if (e.target.closest('[data-diarygo]')) { closeSheet(); if (!goAct('diary', 'preview')) makeDiary(false); return; }
-  if ((t = e.target.closest('[data-pet]'))) { state.pet = +t.dataset.pet; buildPet(petR, PETS[state.pet]); petR.hop = .01; PETS[state.pet].kind === 'dog' ? SFX.woof() : SFX.meow(); save(); renderSheet(); return; }
+  if ((t = e.target.closest('[data-pet]'))) { const index=+t.dataset.pet;if(!Number.isInteger(index)||!PETS[index])return;const focus=t===document.activeElement;state.pet = index;state.petId=PETS[index].id;buildPet(petR, PETS[state.pet]);petR.hop = .01;PETS[state.pet].kind === 'dog' ? SFX.woof() : SFX.meow();save();renderSheet();if(focus)$(`[data-pet="${index}"]`).focus({preventScroll:true});return; }
   if ((t = e.target.closest('[data-wear]'))) return wear(t.dataset.wear, t.dataset.v);
   if ((t = e.target.closest('[data-dye]'))) return wear(t.dataset.dye, t.dataset.v);
   if ((t = e.target.closest('[data-buy]'))) return getItem(t.dataset.buy, !!t.dataset.bag);
@@ -572,7 +580,7 @@ async function thumbs(progress) {
   const R = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); R.setSize(170, 170); R.toneMapping = THREE.NeutralToneMapping;
   const Sc = new THREE.Scene(), Pm = new THREE.PMREMGenerator(R); Sc.environment = Pm.fromScene(new RoomEnvironment(R), .04).texture; Sc.environmentIntensity = .5;
   const key = new THREE.DirectionalLight('#fff6ea', 2.4); key.position.set(2, 3, 4); Sc.add(key, new THREE.HemisphereLight('#ffffff', '#ead9c8', 1.1)); const cam = new THREE.PerspectiveCamera(24, 1, .05, 30), box = new THREE.Box3(), c = new THREE.Vector3();
-  for (let i = 0; i < PETS.length; i++) { const r = { body: new THREE.Group() }; buildPet(r, PETS[i]); r.body.rotation.y = -.6; Sc.add(r.body); cam.position.set(.1, .46, 1.4); cam.lookAt(0, .2, .04); R.render(Sc, cam); PETS[i].thumb = R.domElement.toDataURL('image/png'); Sc.remove(r.body); }
+  for (let i = 0; i < PETS.length; i++) { if(PETS[i].kind==='cat')continue;const r = { body: new THREE.Group() };buildPet(r, PETS[i]);r.body.rotation.y = -.6;Sc.add(r.body);cam.position.set(.1, .46, 1.4);cam.lookAt(0, .2, .04);R.render(Sc, cam);PETS[i].thumb = R.domElement.toDataURL('image/png');Sc.remove(r.body);releasePetGeometry(r); }
   for (let i = 0; i < THUMBK.length; i++) { const k = THUMBK[i], cc = CAT[k], b = new Builder(); F[cc.f](b, cc.o || {}); for (const m of b.glows) { m.emissiveIntensity = m.userData.glow * .5; glowMats.delete(m); } b.g.rotation.y = cc.walk ? .3 : -.6; Sc.add(b.g); box.setFromObject(b.g); box.getCenter(c); const sz = box.getSize(new THREE.Vector3()).length(); cam.position.copy(c).add(new THREE.Vector3(0, cc.walk ? 1 : .5, 1).normalize().multiplyScalar(sz * 2.1)); cam.lookAt(c); R.render(Sc, cam); cc.thumb = R.domElement.toDataURL('image/png'); Sc.remove(b.g); if (i % 6 === 0) { progress(i / THUMBK.length); await nextFrame(); } }
   Pm.dispose(); R.dispose(); R.forceContextLoss();
 }
