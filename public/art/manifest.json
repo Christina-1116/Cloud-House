@@ -1,0 +1,152 @@
+[
+  {
+    "id": 1,
+    "original_name": "云端小屋-冬日温馨风格场景.png",
+    "output": "public/art/scene-01.webp",
+    "bytes": 493904
+  },
+  {
+    "id": 2,
+    "original_name": "云端小屋-海滨度假风格场景.png",
+    "output": "public/art/scene-02.webp",
+    "bytes": 493614
+  },
+  {
+    "id": 3,
+    "original_name": "云端小屋-森系花园风格场景.png",
+    "output": "public/art/scene-03.webp",
+    "bytes": 598230
+  },
+  {
+    "id": 4,
+    "original_name": "云端小屋-法式复古宫廷平层.png",
+    "output": "public/art/scene-04.webp",
+    "bytes": 580500
+  },
+  {
+    "id": 5,
+    "original_name": "云端小屋-现代极简云端loft.png",
+    "output": "public/art/scene-05.webp",
+    "bytes": 501524
+  },
+  {
+    "id": 6,
+    "original_name": "云端小屋-日式和风跃层.png",
+    "output": "public/art/scene-06.webp",
+    "bytes": 652334
+  },
+  {
+    "id": 7,
+    "original_name": "云端小屋-北欧轻奢大平层.png",
+    "output": "public/art/scene-07.webp",
+    "bytes": 533884
+  },
+  {
+    "id": 8,
+    "original_name": "云端小屋-波西米亚度假大平层.png",
+    "output": "public/art/scene-08.webp",
+    "bytes": 717688
+  },
+  {
+    "id": 9,
+    "original_name": "云端小屋-中式禅意大平层.png",
+    "output": "public/art/scene-09.webp",
+    "bytes": 594276
+  },
+  {
+    "id": 10,
+    "original_name": "云端小屋-主界面场景无UI纯净版.png",
+    "output": "public/art/scene-10.webp",
+    "bytes": 289652
+  },
+  {
+    "id": 11,
+    "original_name": "云端小屋-栗子全身图.png",
+    "output": "public/art/resident-11.webp",
+    "bytes": 65188
+  },
+  {
+    "id": 12,
+    "original_name": "云端小屋-阿屿全身图.png",
+    "output": "public/art/resident-12.webp",
+    "bytes": 50380
+  },
+  {
+    "id": 13,
+    "original_name": "云端小屋-橘子全身图.png",
+    "output": "public/art/resident-13.webp",
+    "bytes": 63680
+  },
+  {
+    "id": 14,
+    "original_name": "云端小屋-小满全身图.png",
+    "output": "public/art/resident-14.webp",
+    "bytes": 55310
+  },
+  {
+    "id": 15,
+    "original_name": "云端小屋-知遥全身图.png",
+    "output": "public/art/resident-15.webp",
+    "bytes": 53826
+  },
+  {
+    "id": 16,
+    "original_name": "云端小屋-雪球全身图.png",
+    "output": "public/art/resident-16.webp",
+    "bytes": 37882
+  },
+  {
+    "id": 17,
+    "original_name": "云端小屋-法式复古家具素材.png",
+    "output": "public/art/furniture-17.webp",
+    "bytes": 136078
+  },
+  {
+    "id": 18,
+    "original_name": "云端小屋-海滨度假家具素材.png",
+    "output": "public/art/furniture-18.webp",
+    "bytes": 101734
+  },
+  {
+    "id": 19,
+    "original_name": "云端小屋-冬日温馨家具素材.png",
+    "output": "public/art/furniture-19.webp",
+    "bytes": 127336
+  },
+  {
+    "id": 20,
+    "original_name": "云端小屋-现代极简家具素材.png",
+    "output": "public/art/furniture-20.webp",
+    "bytes": 93184
+  },
+  {
+    "id": 21,
+    "original_name": "云端小屋-森系花园家具素材.png",
+    "output": "public/art/furniture-21.webp",
+    "bytes": 150548
+  },
+  {
+    "id": 22,
+    "original_name": "云端小屋-北欧轻奢家具素材.png",
+    "output": "public/art/furniture-22.webp",
+    "bytes": 97208
+  },
+  {
+    "id": 23,
+    "original_name": "云端小屋-中式禅意家具素材.png",
+    "output": "public/art/furniture-23.webp",
+    "bytes": 111854
+  },
+  {
+    "id": 24,
+    "original_name": "云端小屋-波西米亚家具素材.png",
+    "output": "public/art/furniture-24.webp",
+    "bytes": 158484
+  },
+  {
+    "id": 25,
+    "original_name": "云端小屋-日式和风家具素材.png",
+    "output": "public/art/furniture-25.webp",
+    "bytes": 129342
+  }
+]

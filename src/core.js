@@ -85,7 +85,7 @@ canvas.addEventListener('pointerdown', e => handlers.down?.(e));
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true; controls.dampingFactor = .09; controls.screenSpacePanning = false;
 controls.minPolarAngle = .5; controls.maxPolarAngle = 1.25; controls.minAzimuthAngle = .12; controls.maxAzimuthAngle = PI / 2 - .12;
-controls.rotateSpeed = .5; controls.zoomSpeed = .8; controls.panSpeed = .9; controls.minDistance = 4.5; controls.maxDistance = 46;
+controls.rotateSpeed = .5; controls.zoomSpeed = .8; controls.panSpeed = .9; controls.minDistance = 4.5; controls.maxDistance = 64;
 const composer = new EffectComposer(renderer); composer.setPixelRatio(DPR);
 composer.addPass(new RenderPass(scene, camera));
 let gtao = null;
@@ -126,9 +126,9 @@ MT.deck.map = neutralTex(x => { for (let r = 0; r < 8; r++) { x.fillStyle = r % 
 MT.back.map = neutralTex(x => { x.fillStyle = '#fff'; x.fillRect(0, 0, 256, 256); x.fillStyle = 'rgba(110,120,110,.16)'; for (let i = 0; i < 4; i++) { x.fillRect(i * 64, 0, 2, 256); x.fillRect(0, i * 64, 256, 2); } }, .6);
 const fuzzTex = neutralTex(x => { const d = x.createImageData(256, 256); let s = 9; for (let i = 0; i < d.data.length; i += 4) { s = (s * 16807) % 2147483647; const v = 150 + (s % 106); d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; } x.putImageData(d, 0, 0); }, .25);
 fuzzTex.colorSpace = THREE.NoColorSpace;
-for (const k of ['wall', 'cream', 'fabric', 'rug', 'acc', 'acc2', 'acc3']) { MT[k].bumpMap = fuzzTex; MT[k].bumpScale = k === 'wall' ? .5 : .8; MT[k].roughness = 1; }
+for (const k of ['wall', 'cream', 'fabric', 'rug', 'acc', 'acc2', 'acc3']) { MT[k].bumpMap = fuzzTex; MT[k].bumpScale = k === 'wall' ? .012 : .018; MT[k].roughness = .92; }
 const plushCache = new Map();
-function PL(color) { let m = plushCache.get(color); if (!m) { m = new THREE.MeshPhysicalMaterial({ color, roughness: 1, bumpMap: fuzzTex, bumpScale: .9, sheen: .9, sheenRoughness: .55, sheenColor: new THREE.Color(color).lerp(new THREE.Color('#ffffff'), .55) }); plushCache.set(color, m); } return m; }
+function PL(color) { let m = plushCache.get(color); if (!m) { m = new THREE.MeshPhysicalMaterial({ color, roughness: 1, bumpMap: fuzzTex, bumpScale: .015, sheen: .9, sheenRoughness: .55, sheenColor: new THREE.Color(color).lerp(new THREE.Color('#ffffff'), .55) }); plushCache.set(color, m); } return m; }
 let themeIdx = 0;
 function applyTheme(i, animate = true) {
   themeIdx = i; const c = THEMES[i].c, from = {}, to = {};
@@ -246,4 +246,21 @@ function watchPerf(dt) {
     if (perf.level >= 2 && gtao) gtao.enabled = false; if (perf.level >= 3) { sun.shadow.mapSize.set(1024, 1024); sun.shadow.map?.dispose(); sun.shadow.map = null; }
     renderer.setSize(innerWidth, innerHeight, false); composer.setSize(innerWidth, innerHeight);
   } else perf.n = 60;
+}
+
+// Batch a static furnishing by material; preserve its parent for editing/ray hits.
+function compactFurniture(b){
+ const meshes=[];b.g.updateMatrixWorld(true);b.g.traverse(m=>{if(m.isMesh&&!m.isInstancedMesh&&!Array.isArray(m.material))meshes.push(m);});
+ const batches=new Map();for(const m of meshes){const key=`${m.material.uuid}:${m.castShadow}:${m.receiveShadow}`;if(!batches.has(key))batches.set(key,[]);batches.get(key).push(m);}
+ const point=new THREE.Vector3(),normal=new THREE.Vector3();
+ for(const group of batches.values()){
+  if(group.length<2)continue;const positions=[],normals=[],uvs=[],indices=[];
+  for(const m of group){const geo=m.geometry,p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv,offset=positions.length/3,nm=new THREE.Matrix3().getNormalMatrix(m.matrixWorld);
+   for(let i=0;i<p.count;i++){point.fromBufferAttribute(p,i).applyMatrix4(m.matrixWorld).toArray(positions,positions.length);if(n)normal.fromBufferAttribute(n,i).applyMatrix3(nm).normalize();else normal.set(0,1,0);normal.toArray(normals,normals.length);uvs.push(uv?uv.getX(i):0,uv?uv.getY(i):0);}
+   if(geo.index)for(let i=0;i<geo.index.count;i++)indices.push(offset+geo.index.getX(i));else for(let i=0;i<p.count;i++)indices.push(offset+i);
+   m.removeFromParent();
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.setIndex(indices);geometry.computeBoundingSphere();b.own.push(geometry);
+  const mesh=new THREE.Mesh(geometry,group[0].material);mesh.castShadow=group[0].castShadow;mesh.receiveShadow=group[0].receiveShadow;b.g.add(mesh);
+ }
 }

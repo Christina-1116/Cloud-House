@@ -1,3 +1,6 @@
 src/index.html
 src/cloud-home.html
 src/check.mjs
+qa/
+node_modules/
+*.zip

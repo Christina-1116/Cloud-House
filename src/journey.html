@@ -1,0 +1,27 @@
+<section id="journey" class="journey" aria-label="云上旅居" hidden>
+  <header class="j-header">
+    <button class="j-brand" data-j="about" aria-label="云端小屋，旅居说明"><svg viewBox="0 0 48 40" aria-hidden="true"><path d="M9 29h29a7 7 0 0 0 0-14h-1a12 12 0 0 0-23-3 9 9 0 0 0-5 17Z"/><path d="M20 28v-9h9v9M17 18l7-6 8 6"/></svg><span><b>云端小屋</b><small>CLOUD HOUSE</small></span></button>
+    <div class="j-header-note">在云上，收藏生活的小小回响。</div>
+    <div class="j-tools"><button data-j="album" class="j-money" aria-label="打开旅居册"><span>✧</span><b id="jStamps">0 / 10</b><small>旅居邮票</small></button><span class="j-divider"></span><button data-j="coins" class="j-money" aria-label="星星币与家具"><span>✦</span><b id="jCoins">150</b><small>星星币</small></button><button data-j="sound" id="jSound" class="j-icon" aria-label="关闭声音"></button></div>
+  </header>
+  <main class="j-layout">
+    <aside class="j-aside">
+      <div class="j-overline"><span id="jNumber">STAY 01 / 10</span><span class="j-live"><i></i> 云上旅居</span></div>
+      <h1 id="jTitle">云端原居</h1><div class="j-english" id="jEnglish">A PLACE TO BEGIN</div>
+      <p class="j-intro" id="jIntro"></p><div class="j-mood" id="jMood"></div>
+      <div class="j-rule"><span>今日的小确幸</span><small id="jProgress">0 / 3</small></div>
+      <div class="j-tasks" id="jTasks"></div>
+      <button class="j-host" data-j="story"><span class="j-host-photo"><img id="jHostArt" alt=""></span><span><small>有人在等你</small><b id="jHostName"></b><em>听听今天的故事 <span>↗</span></em></span></button>
+      <button class="j-travel" data-j="map"><span>打开云海地图</span><b>↗</b></button>
+      <p class="j-aside-foot">不必赶路。每一站，都可以久一点。</p>
+    </aside>
+    <section class="j-scene-area" aria-label="可互动的小屋场景">
+      <div class="j-scene" id="jScene"><img id="jArt" alt="云端原居，可探索的小屋" fetchpriority="high"><div class="j-tone"></div><div class="j-dust" aria-hidden="true"></div><div id="jHotspots"></div><div class="j-scene-loading" id="jImageStatus" hidden></div><div class="j-scene-caption"><span id="jWeather">☼ 日光正好</span><span>点击微光，发现藏在小屋里的故事</span></div></div>
+      <div class="j-scene-bottom"><button data-j="prev" class="j-arrow" aria-label="上一站">←</button><span id="jSceneLabel">01 — 云端原居</span><button data-j="next" class="j-arrow" aria-label="下一站">→</button><div class="j-scene-actions"><button data-j="time" id="jTime">☼ 白昼</button><button data-j="hints" id="jHints" aria-pressed="true">✧ 微光提示</button><button data-j="photo">▧ 留一张照片</button></div></div>
+    </section>
+  </main>
+  <footer class="j-footer"><span class="j-footer-copy"><i>✧</i><span id="jFooterText">今天也可以，从一件小事开始。</span></span><nav aria-label="游戏功能"><button data-j="map"><span>⌁</span>旅居地图</button><button data-j="album"><span>▤</span>旅居手册</button><button data-j="residents"><span>♧</span>云上住客</button><button data-j="festival" id="jFestival"><span>✦</span>云端晚会</button><button data-j="home" class="j-home-button"><span>⌂</span>我的 3D 小屋</button></nav></footer>
+</section>
+<button class="j-return" id="jReturn" hidden>▤ 打开旅居手册</button>
+<div class="j-overlay" id="jOverlay" hidden><section class="j-dialog" id="jDialog" role="dialog" aria-modal="true" aria-label="旅居面板" tabindex="-1"></section></div>
+<div id="jAnnouncement" class="j-sr" aria-live="polite" aria-atomic="true"></div>

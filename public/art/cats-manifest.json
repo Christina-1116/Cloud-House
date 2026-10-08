@@ -1,0 +1,17 @@
+{
+  "reference": "九只小猫3D九宫格渲染图.png",
+  "names_reference": "云端小屋-九宫格真实软糯小猫V3.png",
+  "output": "cats-grid.webp",
+  "framing": "Original 3×3 reference sheet. CSS frames each cell at runtime; no cat appearance edits.",
+  "names": [
+    "云绒",
+    "橘座",
+    "煤球",
+    "花花",
+    "奶糖",
+    "暹罗",
+    "布偶",
+    "金渐层",
+    "墨墨"
+  ]
+}

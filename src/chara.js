@@ -7,8 +7,8 @@ const CHARS = [
   { id: 'ju', n: '橘子', tag: '元气，爱打招呼', he: '她', hair: '#e8752c', style: 'bob', eye: '#8a4a20', mouth: 'open', hat: 'bucket', top: CREAM, ov: '#ee7a34', bot: '#ee7a34', pom: null, acc: null, voice: '爽朗直接，爱笑，喜欢给人打气' },
   { id: 'li', n: '栗子', tag: '慢性子，爱喝热的', he: '他', hair: BROWN, style: 'boy', eye: '#8a5a34', mouth: 'smile', hat: 'acorn', top: CREAM, ov: SAGE, bot: SAGE, pom: null, acc: null, voice: '慢悠悠的，爱喝热饮，说话像在烤火' },
   { id: 'man', n: '小满', tag: '爱做饭，爱云', he: '她', hair: BROWN, style: 'bun', eye: '#8a5236', mouth: 'open', hat: 'clip', top: CREAM, ov: SAGE, bot: SAGE, pom: null, acc: null, voice: '活泼爱笑，喜欢分享吃的，语气里带感叹' },
-  { id: 'xia', n: '知夏', tag: '安静，爱看书', he: '她', hair: BROWN, style: 'neat', eye: '#6a4a34', mouth: 'smile', hat: 'bear', top: CREAM, ov: null, bot: '#d9c7a6', pom: null, acc: 'glasses', voice: '温柔安静，说话像写信，喜欢引用书里的句子' },
-  { id: 'yun', n: '团团', tag: '一朵会走路的云', he: '它', body: 'cloud', hair: '#ffffff', eye: '#5a4030', mouth: 'w', hat: 'straw', top: '#ffffff', ov: null, bot: '#ffffff', acc: 'scarf', voice: '软乎乎的小云朵，说话很短，喜欢用“呼”“噗”这样的语气词' },
+  { id: 'xia', n: '知遥', tag: '安静，爱看书', he: '她', hair: BROWN, style: 'neat', eye: '#6a4a34', mouth: 'smile', hat: 'bear', top: CREAM, ov: null, bot: '#d9c7a6', pom: null, acc: 'glasses', voice: '温柔安静，说话像写信，喜欢引用书里的句子' },
+  { id: 'yun', n: '雪球', tag: '一朵会走路的云', he: '它', body: 'cloud', hair: '#ffffff', eye: '#5a4030', mouth: 'w', hat: 'straw', top: '#ffffff', ov: null, bot: '#ffffff', acc: 'scarf', voice: '软乎乎的小云朵，说话很短，喜欢用“呼”“噗”这样的语气词' },
 ];
 const HATS = [
   { id: 'none', n: '不戴', price: 0 }, { id: 'beret', n: '小芽贝雷帽', price: 0 }, { id: 'bucket', n: '橘子渔夫帽', price: 0 }, { id: 'acorn', n: '橡果毛线帽', price: 0 }, { id: 'clip', n: '云朵发夹', price: 0 }, { id: 'bear', n: '小熊贝雷帽', price: 0 }, { id: 'straw', n: '草编小帽', price: 0 },
@@ -16,10 +16,6 @@ const HATS = [
 ];
 const ACCS = [{ id: 'none', n: '不带', price: 0 }, { id: 'pack', n: '小背包', price: 0 }, { id: 'glasses', n: '圆眼镜', price: 0 }, { id: 'scarf', n: '绿围巾', price: 0 }, { id: 'bow', n: '蝴蝶结', price: 100 }, { id: 'wings', n: '小翅膀', price: 320 }, { id: 'balloon', n: '气球', price: 160 }];
 const DYE = [CREAM, SAGE, '#ee7a34', '#e4a89c', '#a9cfd6', '#c9bfe6', '#f1d27a', '#b98d6f', '#8fb0c8', '#ffffff'];
-const PETS = [
-  { id: 'cat0', n: '奶盖', kind: 'cat', c: '#fbf3e6', c2: '#f1c9a6' }, { id: 'cat1', n: '橘座', kind: 'cat', c: '#f0a860', c2: '#fff3e2' }, { id: 'cat2', n: '煤球', kind: 'cat', c: '#6a6570', c2: '#f4f0ea' },
-  { id: 'dog0', n: '豆包', kind: 'dog', c: '#e2b47a', c2: '#fbf3e6' }, { id: 'dog1', n: '汤圆', kind: 'dog', c: '#fbf7f0', c2: '#e9d9c4' },
-];
 const eyeCache = new Map();
 function eyeMat(iris) {
   let m = eyeCache.get(iris); if (m) return m;
@@ -166,6 +162,8 @@ function setProp(rig, kind) {
   p.add(b.g);
 }
 function buildPet(rig, def) {
+  releasePetGeometry(rig);
+  if (def.kind === 'cat') return buildSoftCat(rig, def);
   if (rig.b) rig.body.remove(rig.b.g); const b = rig.b = new Builder(), g = b.g, c = PL(def.c), c2 = PL(def.c2), dog = def.kind === 'dog'; rig.body.add(g); g.scale.setScalar(1.15); rig.def = def;
   b.sph(.12, c, 0, .14, 0, .88, .82, 1.3); b.sph(.07, c2, 0, .11, .06, .8, .6, 1); const H = rig.head = grp(g, 0, .25, .15), hm = m => { H.add(m); m.position.sub(H.position); return m; };
   hm(b.sph(.105, c, 0, .25, .15, 1.05, .92, .95));

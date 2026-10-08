@@ -189,21 +189,23 @@ function fixed(fn, x, z, deg = 0, o = {}) { const b = new Builder(); fn(b, o); b
 const fixedLamps = [];
 fixed(F.mirror, 0, .75, 90, { y: 1.5 }); fixed(F.towelRack, 2.93, 1.6, -90, { y: .82 }); fixed(F.slippers, 2.45, 2.2, 30); fixed(F.wallShelf, 4.35, 0, 0, { y: 1.42 }); fixed(F.frame, 8.55, 0, 0, { y: 1.9 }); fixed(F.frame, 0, 3.0, 90, { y: 1.85, c: 'acc3' }); fixed(F.slippers, 4.4, 7.7, -20);
 function addFurn(uid, k, x, z, r, core) {
-  const c = CAT[k], b = new Builder(); c.fp = F[c.f](b, c.o || {}); const f = { uid, k, x, z, r, b, core: !!core }; b.g.userData.furn = f; houseRoot.add(b.g); furn.push(f); syncFurn(f); return f;
+  const c = CAT[k], b = new Builder(); c.fp = F[c.f](b, c.o || {});compactFurniture(b); const f = { uid, k, x, z, r, b, core: !!core }; b.g.userData.furn = f; houseRoot.add(b.g); furn.push(f); syncFurn(f); return f;
 }
-function syncFurn(f) { f.b.g.position.set(f.x, CAT[f.k].walk ? .002 + (furn.indexOf(f) % 7) * .0016 : 0, f.z); f.b.g.rotation.y = f.r * D2R; f.b.g.updateMatrixWorld(true); }
-function removeFurn(f) { f.b.g.removeFromParent(); for (const m of f.b.glows) glowMats.delete(m); furn.splice(furn.indexOf(f), 1); }
+function syncFurn(f) { f.b.g.position.set(f.x, homeGroundAt(f.x,f.z)+(CAT[f.k].walk ? .002 + (furn.indexOf(f) % 7) * .0016 : 0), f.z); f.b.g.rotation.y = f.r * D2R; f.b.g.updateMatrixWorld(true); }
+function removeFurn(f) { f.b.g.removeFromParent(); for (const m of f.b.glows) glowMats.delete(m); for(const g of f.b.own)g.dispose();furn.splice(furn.indexOf(f), 1); }
 const fpOf = f => { const [w, d] = CAT[f.k].fp, sw = Math.abs(Math.round(f.r / 90)) % 2; return sw ? [d, w] : [w, d]; };
 const rectOf = (f, x = f.x, z = f.z) => { const [w, d] = fpOf(f); return { x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 }; };
 const hitR = (a, b, e = .02) => a.x0 < b.x1 - e && a.x1 > b.x0 + e && a.z0 < b.z1 - e && a.z1 > b.z0 + e;
 function canPlace(f, x, z) {
   const r = rectOf(f, x, z); if (r.x0 < 0 || r.z0 < 0 || r.x1 > HX || r.z1 > HZ) return false; if (CAT[f.k].walk) return true;
+  const elevation=homeGroundAt(x,z);if([[r.x0,r.z0],[r.x1,r.z0],[r.x0,r.z1],[r.x1,r.z1]].some(([X,Z])=>Math.abs(homeGroundAt(X,Z)-elevation)>.12))return false;
   for (const s of staticBlocks) if (hitR(r, s)) return false; for (const o of furn) if (o !== f && !CAT[o.k].walk && hitR(r, rectOf(o))) return false; return true;
 }
 const toWorld = (f, lx, lz) => { const a = f.r * D2R, c = Math.cos(a), s = Math.sin(a); return [f.x + lx * c + lz * s, f.z - lx * s + lz * c]; };
 function refreshLamps() {
   const spots = [...fixedLamps]; for (const f of furn) if (f.b.light) spots.push({ p: f.b.light.p.clone().applyMatrix4(f.b.g.matrixWorld), color: f.b.light.color });
-  lampPool.forEach((l, i) => { const s = spots[i]; l.userData.on = !!s; if (s) { l.position.copy(s.p); l.color.set(s.color); } else l.position.set(HX / 2, -40, HZ / 2); });   // an unused light must never sit on a surface: a zero-length light vector turns into NaN and bloom spreads it over the whole frame applyLights();
+  lampPool.forEach((l, i) => { const s = spots[i]; l.userData.on = !!s; if (s) { l.position.copy(s.p); l.color.set(s.color); } else l.position.set(HX / 2, -40, HZ / 2); });   // an unused light must never sit on a surface: a zero-length light vector turns into NaN and bloom spreads it over the whole frame
+  applyLights();
 }
 
 /* ═════════════ walk grid + path finding ═════════════ */
@@ -219,12 +221,13 @@ function nearestFree(x, z) {
   for (let r = 0; r < 14 && !best; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const X = cx + dx, Z = cz + dz; if (X < 0 || Z < 0 || X >= NX || Z >= NZ || navB[Z * NX + X]) continue; const d = ((X + .5) * CELL - x) ** 2 + ((Z + .5) * CELL - z) ** 2; if (d < bd) { bd = d; best = [X, Z]; } }
   return best;
 }
-function los(ax, az, bx, bz) { const d = Math.hypot(bx - ax, bz - az), n = Math.ceil(d / .07); for (let i = 0; i <= n; i++) { const t = i / n; if (!isFree(ax + (bx - ax) * t, az + (bz - az) * t)) return false; } return true; }
+function los(ax,az,bx,bz){const n=Math.max(1,Math.ceil(Math.hypot(bx-ax,bz-az)/.07));let height=homeGroundAt(ax,az);for(let i=0;i<=n;i++){const t=i/n,x=ax+(bx-ax)*t,z=az+(bz-az)*t,y=homeGroundAt(x,z);if(!isFree(x,z)||Math.abs(y-height)>.15)return false;height=y;}return true;}
+const homeCanStep=(x,z,X,Z)=>Math.abs(homeGroundAt((x+.5)*CELL,(z+.5)*CELL)-homeGroundAt((X+.5)*CELL,(Z+.5)*CELL))<=.16;
 const D8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 function findPath(fx, fz, tx, tz) {
   const s = nearestFree(fx, fz), g = nearestFree(tx, tz); if (!s || !g) return null;
   const start = s[1] * NX + s[0], goal = g[1] * NX + g[0], prev = new Int32Array(NX * NZ).fill(-1), q = [start]; prev[start] = start;
-  for (let h = 0; h < q.length; h++) { const c = q[h]; if (c === goal) break; const x = c % NX, z = c / NX | 0; for (const [dx, dz] of D8) { const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= NX || Z >= NZ) continue; const k = Z * NX + X; if (prev[k] !== -1 || navB[k]) continue; if (dx && dz && (navB[z * NX + X] || navB[Z * NX + x])) continue; prev[k] = c; q.push(k); } }
+  for (let h = 0; h < q.length; h++) { const c = q[h]; if (c === goal) break; const x = c % NX, z = c / NX | 0; for (const [dx, dz] of D8) { const X = x + dx, Z = z + dz; if (X < 0 || Z < 0 || X >= NX || Z >= NZ) continue; const k = Z * NX + X; if (prev[k] !== -1 || navB[k] || !homeCanStep(x,z,X,Z)) continue; if (dx && dz && (navB[z * NX + X] || navB[Z * NX + x] || !homeCanStep(x,z,X,z) || !homeCanStep(x,z,x,Z))) continue; prev[k] = c; q.push(k); } }
   if (prev[goal] === -1) return null;
   const pts = []; for (let k = goal; k !== start; k = prev[k]) pts.push([(k % NX + .5) * CELL, ((k / NX | 0) + .5) * CELL]); pts.push([(s[0] + .5) * CELL, (s[1] + .5) * CELL]); pts.reverse();
   const out = [pts[0]]; let i = 0; while (i < pts.length - 1) { let j = pts.length - 1; while (j > i + 1 && !los(pts[i][0], pts[i][1], pts[j][0], pts[j][1])) j--; out.push(pts[j]); i = j; }
