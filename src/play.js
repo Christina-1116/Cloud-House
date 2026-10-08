@@ -2,7 +2,7 @@
 const WX = { sunny: { n: '晴', amb: 'none' }, cloudy: { n: '多云', amb: 'none' }, rain: { n: '小雨', amb: 'rain' }, breeze: { n: '有风', amb: 'petal' }, snow: { n: '小雪', amb: 'snow' } };
 function weatherNow() { const d = new Date(), s = d.getFullYear() * 372 + d.getMonth() * 31 + d.getDate(); let h = (s * 9301 + Math.floor(d.getHours() / 6) * 49297 + 7) % 233280; h = (h * 9301 + 49297) % 233280; const r = h / 233280, m = d.getMonth(), cold = m >= 10 || m <= 1; return r < .34 ? 'sunny' : r < .52 ? 'cloudy' : r < .76 ? (cold ? 'snow' : 'rain') : r < .92 ? 'breeze' : (cold ? 'snow' : 'rain'); }
 let wx = 'sunny';
-function applyWeather() { wx = state.wxForce || weatherNow(); setAmbience(state.amb === 'auto' ? (wx === 'sunny' && env.night > .6 ? 'firefly' : WX[wx].amb) : state.amb); $('#wx').textContent = WX[wx].n; }
+function applyWeather() { wx = state.wxForce || (homeWorld.active==='winter'?'snow':weatherNow());setAmbience(state.amb==='auto'?(homeWorld.active==='home'?(wx==='sunny'&&env.night>.6?'firefly':WX[wx].amb):homeScene(homeWorld.active).ambience):state.amb); $('#wx').textContent = WX[wx].n; }
 const OUTDOOR = ['water', 'swing', 'stargaze', 'stretch'];
 const WXLINE = { rain: ['下雨了。今天哪儿也不去。', '雨落在云上，是没有声音的。', '(看着窗外的雨发呆)'], snow: ['你那边下雪了吗？', '雪落在云上，分不清谁是谁。'], sunny: ['今天太阳好，晒一下。', '被子该拿出去晒了。'], cloudy: ['阴天。适合煮点东西。', '云很厚，像盖了两层被子。'], breeze: ['风太大了，窗关上了。', '花瓣又吹进来了。'] };
 
@@ -27,7 +27,7 @@ function weightedAct(ids) { const p = persOf(state.chara), bad = wx === 'rain' |
 
 /* ═════════════ nobody walks through anybody ═════════════ */
 const SEP = .6, SEP_PET = .42;
-function applyPush(root, dx, dz) { const p = root.position, nx = p.x + dx, nz = p.z + dz; if (isFree(nx, nz)) { p.x = nx; p.z = nz; } else if (isFree(nx, p.z)) p.x = nx; else if (isFree(p.x, nz)) p.z = nz; }
+function applyPush(root, dx, dz) { const p = root.position, nx = p.x + dx, nz = p.z + dz; if (isFree(nx, nz) && Math.abs(homeGroundAt(nx,nz)-homeGroundAt(p.x,p.z))<.16) { p.x = nx; p.z = nz; } else if (isFree(nx, p.z)) p.x = nx; else if (isFree(p.x, nz)) p.z = nz; }
 function pushApart(a, b, min, dt, ma, mb) {
   let dx = a.position.x - b.position.x, dz = a.position.z - b.position.z, d = Math.hypot(dx, dz); if (d >= min || !(ma || mb)) return; if (d < 1e-3) { dx = .7; dz = .7; d = 1; }
   const f = Math.min((min - d) * 12, 2.6) * dt / d, sa = ma ? (mb ? .5 : 1) : 0, sb = mb ? (ma ? .5 : 1) : 0; if (sa) applyPush(a, dx * f * sa, dz * f * sa); if (sb) applyPush(b, -dx * f * sb, -dz * f * sb);

@@ -11,7 +11,7 @@ const output = process.env.QA_DIR || 'qa/pets';
     const errors=[];page.on('pageerror', e=>errors.push(e.message));
     await page.goto(target);
     await page.waitForFunction(()=>window.__home?.voyage.ready);
-    await page.locator('[data-j="begin"]').click();
+    await page.evaluate(() => { window.__home.jEnter(); document.querySelector('[data-j="begin"]').click(); });
     await page.locator('.j-footer [data-j="home"]').click();
     await page.locator('#btnChar').click();await page.locator('[data-tab="p"]').click();
     assert.equal(await page.locator('.pet-cats [data-pet]').count(),9,'All nine reference cats must be selectable');

@@ -17,7 +17,7 @@ fs.mkdirSync(output, { recursive: true });
     await page.route('https://**/*', route => { failures.push(`Unexpected external request ${route.request().url()}`); return route.abort(); });
     await page.goto(TARGET);
     await page.waitForFunction(() => window.__home?.voyage.ready, { timeout: 60000 });
-    await page.locator('[data-j="begin"]').click();
+    await page.evaluate(() => { window.__home.jEnter(); document.querySelector('[data-j="begin"]').click(); });
     await page.waitForFunction(() => !document.querySelector('#loader'));
     await check('initial scene displays with all artwork and no external requests', async () => {
       assert.equal(await page.locator('#jTitle').textContent(), '云端原居');

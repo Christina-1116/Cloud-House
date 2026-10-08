@@ -82,19 +82,19 @@ function jEnter() {
 }
 function jHome() {
   jClose(); voyage.on = false; $('#journey').hidden = true; $('#jReturn').hidden = false; document.body.classList.remove('journey-on');
-  view.wide = true; view.pause = 0; camDist(wideDist()); resize();
-  toast('旅居奖励家具在「商店 → 背包」，取出后可以自由摆放。');
+  switchHome(state.journey.room);view.wide=true;view.pause=performance.now()+3000;camDist(Math.min(wideDist(),innerWidth<600?52:23));resize();syncHomeUI();
+  toast(`${homeScene(homeWorld.active).n} · ${CHARS[state.chara].n}和${PETS[state.pet].n}都在这里。`);
 }
 function jTravel(id) {
   if (!JOURNEY_ROOMS.some(r => r.id === id)) return;
-  jClose(); jApply({type:'travel',room:id}); SFX.whoosh(); jAnnounce(`已到达${jRoom().n}`);
+  const journal=voyage.on;jClose();jApply({type:'travel',room:id});switchHome(id);if(!journal)jHome(); SFX.whoosh(); jAnnounce(`已到达${jRoom().n}`);
   // Preload only the adjacent stop rather than decoding every full scene at once.
   const index = JOURNEY_ROOMS.findIndex(r => r.id === id);
   const next = JOURNEY_ROOMS[(index+1)%JOURNEY_ROOMS.length]; const im = new Image(); im.src = J_ART(next.art);
 }
 function jMap() {
   const stats = journeyStats(state.journey);
-  jOpen(`<div class="j-dialog-kicker">THE CLOUD ATLAS</div><h2>下一站，想去哪里？</h2><p>十间漂在云上的小屋。没有赶路的时刻表，只收藏让你想停下来的风景。</p><div class="j-map-grid">${JOURNEY_ROOMS.map((r,i) => { const p=state.journey.rooms[r.id]; return `<button class="j-map-card" data-j="travel" data-room="${r.id}" aria-current="${r.id===jRoom().id}"><img src="${J_THUMB(r.art)}" alt="${r.n}" loading="eager"><small>STAY ${String(i+1).padStart(2,'0')}</small><b>${r.n}</b><em>${r.mood}</em>${p?.postcard?'<span class="j-card-stamp">✓</span>':''}</button>`; }).join('')}</div><div class="j-note">已收集 ${stats.completed} 张旅居邮票 · 所有房间都可以直接到访。在每间小屋完成三件小事，留下一张自己的邮票。</div>`, 'map');
+  jOpen(`<div class="j-dialog-kicker">THE CLOUD ATLAS</div><h2>下一站，想去哪里？</h2><p>十间漂在云上的小屋。没有赶路的时刻表，只收藏让你想停下来的风景。</p><div class="j-map-grid">${JOURNEY_ROOMS.map((r,i) => { const p=state.journey.rooms[r.id]; return `<button class="j-map-card" data-j="travel" data-room="${r.id}" aria-current="${r.id===jRoom().id}"><img src="${J_THUMB(r.art)}" alt="${r.n}" loading="eager"><small>STAY ${String(i+1).padStart(2,'0')}</small><b>${r.n}</b><em>${r.mood}</em>${p?.postcard?'<span class="j-card-stamp">✓</span>':''}</button>`; }).join('')}</div><div class="j-note">已收集 ${stats.completed} 张旅居邮票 · 所有房间都可以直接到访。选一间小屋，直接进入可转动视角、自由生活的 3D 空间。人物和宠物会陪你一起到访。</div>`, 'map');
 }
 function jAlbum() {
   const stats = journeyStats(state.journey);
@@ -123,7 +123,7 @@ function jResidents() {
   jOpen(`<div class="j-dialog-kicker">THE PEOPLE THAT MAKE IT HOME</div><h2>有人陪着，就是小屋。</h2><p>选择陪你生活的住客，也会同步到原来的 3D 小屋。每位旅居主人，都有自己的心事。</p><div class="j-residents">${CHARS.map((c,i)=>`<button class="j-resident" data-j="resident" data-resident="${i}" aria-pressed="${state.chara===i}"><img src="${J_HOST_ART(i)}" alt="${c.n}" loading="lazy"><b>${c.n}</b><small>${c.tag}</small></button>`).join('')}</div><div class="j-note">现在陪你生活的是 ${CHARS[state.chara].n}。旅居时，听听不同主人的故事；回家后，给自己的住客写一封信。</div>`, 'residents');
 }
 function jAbout() {
-  jOpen(`<div class="j-dialog-kicker">WELCOME TO CLOUD HOUSE</div><div class="j-big-symbol">☁</div><h2>把日子，住成喜欢的样子。</h2><p class="j-lead">一封空白的明信片，<br>十间漂在云上的小屋，<br>还有一些等你听见的小小心事。</p><div class="j-note">✧ 点微光，找到房间里的三件小物<br>♧ 玩一场专属小游戏<br>♡ 听主人讲完故事，留一句回应<br><br>集齐三枚印章，收下旅居邮票。<br>五张邮票后，朋友们会为你办一场云端晚会。</div><div class="j-actions"><button class="j-primary" data-j="begin">从这一盏灯开始</button></div><p class="j-caption">没有倒计时，也没有体力限制。慢一点也很好。</p>`, 'about', 'compact');
+  jOpen(`<div class="j-dialog-kicker">WELCOME TO CLOUD HOUSE</div><div class="j-big-symbol">☁</div><h2>和朋友，把日子住成喜欢的样子。</h2><p class="j-lead">十间真正立体的小屋，<br>会生活的住客与软绒小猫，<br>还有等你一起度过的每一天。</p><div class="j-note">⌂ 点右上角的小屋名字，换一个 3D 场景<br>♡ 点人物、宠物和家具，就能和它们互动<br>✧ 点微光，找到房间里的三件小物<br>♧ 玩一场专属小游戏<br>♡ 听主人讲完故事，留一句回应<br><br>集齐三枚印章，收下旅居邮票。<br>五张邮票后，朋友们会为你办一场云端晚会。</div><div class="j-actions"><button class="j-primary" data-j="begin">从这一盏灯开始</button></div><p class="j-caption">没有倒计时，也没有体力限制。慢一点也很好。</p>`, 'about', 'compact');
 }
 function jFestival() {
   const stats=journeyStats(state.journey);
@@ -293,6 +293,6 @@ document.addEventListener('keydown',e=>{
 },true);
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&voyage.game){jClearGame();if(voyage.modalKind==='game')jRitualStart();}});
 function initJourney() {
-  voyage.ready=true;jEnter();
+  voyage.ready=true;jRender();jHome();
   if(!state.journey.introduced)jAbout();
 }

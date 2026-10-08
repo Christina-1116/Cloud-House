@@ -9,16 +9,19 @@ SRC = ROOT / 'src'
 head = (SRC / 'head.html').read_text()
 head = head.replace('</style>', (SRC / 'journey.css').read_text() + '\n</style>', 1)
 head = head.replace('</style>', (SRC / 'pets.css').read_text() + '\n</style>', 1)
+head = head.replace('</style>', (SRC / 'homes.css').read_text() + '\n</style>', 1)
+head = head.replace('<div class="low" id="low">', '<div class="low" id="low">' + (SRC / 'homes.html').read_text())
 head = head.replace('<div class="toast"', (SRC / 'journey.html').read_text() + '\n<div class="toast"', 1)
 head = re.sub(r'<script type="importmap">.*?</script>', '', head, flags=re.S)
 head = re.sub(r'<link[^>]+href="https://fonts\.[^"]+"[^>]*>\n?', '', head)
 art = {p.name: 'data:image/webp;base64,' + base64.b64encode(p.read_bytes()).decode('ascii')
        for p in sorted((ROOT / 'public/art').glob('*.webp'))}
 model = re.sub(r'^export ', '', (SRC / 'journey-model.mjs').read_text(), flags=re.M)
-game = (SRC / 'game.js').read_text().replace('/*__PLAY__*/', (SRC / 'play.js').read_text() + '\n' + model + '\n' + (SRC / 'journey.js').read_text())
+game = (SRC / 'game.js').read_text().replace('/*__PLAY__*/', (SRC / 'play.js').read_text() + '\n' + model + '\n' + (SRC / 'journey.js').read_text() + '\n' + (SRC / 'homes-runtime.js').read_text())
 parts = [head, '<script type="module">', 'const JOURNEY_ART = ' + json.dumps(art) + ';']
 parts += [re.sub(r'^export ', '', (SRC / 'pets-model.mjs').read_text(), flags=re.M)]
-parts += [(SRC / name).read_text() for name in ['assets.js', 'core.js', 'world.js', 'pets-3d.js', 'chara.js', 'pets-ui.js']]
+parts += [re.sub(r'^export ', '', (SRC / 'homes-model.mjs').read_text(), flags=re.M)]
+parts += [(SRC / name).read_text() for name in ['assets.js', 'core.js', 'world.js', 'homes-shell.js', 'pets-3d.js', 'chara.js', 'pets-ui.js']]
 parts += [game]
 body = '\n'.join(parts)
 module = re.search(r'<script type="module">(.*?)</script>', body, re.S).group(1)

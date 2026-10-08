@@ -29,7 +29,7 @@ const browserName = process.env.TEST_BROWSER || 'chromium';
     } catch {
       assert.fail(`Double-click launch did not initialize: ${errors.join('; ')} ${requests.join('; ')}`);
     }
-    await page.locator('[data-j="begin"]').click();
+    await page.evaluate(() => { window.__home.jEnter(); document.querySelector('[data-j="begin"]').click(); });
     await page.locator('#jHotspots button').first().click();
     await page.keyboard.press('Escape');
     await page.locator('.j-travel').click();

@@ -8,10 +8,11 @@ const newDay = () => ({ d: today(), letter: 0, pat: 0, watch: 0, bub: 0, duo: 0,
 function fresh() { return { v: 3, chara: 0, pet: 0, theme: 0, time: 'auto', light: 'auto', amb: 'auto', sound: true, music: true, aff: 0, coins: 150, goal: 0, bought: 0, fish: {}, dishes: {}, mem: [], best: {}, plays: {}, pats: 0, perfect: 0, evDay: '', evLast: '', lastSeen: '', mailNew: false, saidHome: false, letters: [], foot: { d: '', list: [] }, day: { d: '' }, look: {}, ward: [], furn: null, bag: {}, uid: 1, mate: -1, diary: [], today: { d: '' }, first: true }; }
 function loadState() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 3) return { ...fresh(), ...s, first: false }; } catch { } return null; }
 let state = loadState() || fresh();
+state.homes=restoreHomes(state);
 state.pet = restorePetSelection(state); state.petId = PETS[state.pet].id;
 AU.on = state.sound !== false;
 let saveT = 0;
-function save() { clearTimeout(saveT); saveT = setTimeout(() => { state.furn = furn.map(f => ({ u: f.uid, k: f.k, x: +f.x.toFixed(3), z: +f.z.toFixed(3), r: f.r })); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { if (!state.saveWarned) { state.saveWarned = true; toast("浏览器暂时无法保存进度，请允许本地存储或先保留这一页。"); } } }, 300); }
+function save() { clearTimeout(saveT); saveT = setTimeout(() => { captureHomeState(); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { if (!state.saveWarned) { state.saveWarned = true; toast("浏览器暂时无法保存进度，请允许本地存储或先保留这一页。"); } } }, 300); }
 const LV = [0, 40, 120, 260, 480, 800, 1400, 2200], LVN = ['初识', '熟悉', '亲近', '默契', '家人', '挚友', '知己', '此生'];
 const level = () => LV.filter(x => state.aff >= x).length;
 function dayOf() { if (state.day.d !== today()) state.day = newDay(); return state.day; }
@@ -71,7 +72,7 @@ const hero = newRig('hero'), petR = newRig('pet');
 const H = { state: 'idle', act: null, next: null, base: 'stand', anim: null, path: [], walk: 0, t: 0, mode: 'auto', exit: null, mount: null, yaw: 0, fxT: 0, bubT: 3, paid: false };
 const dress = k => { buildChara(hero, CHARS[state.chara], k); setProp(hero, H.act && ACTS[H.act].prop); };
 function leaveSeat() {
-  if (!H.act) return; if (H.exit) hero.root.position.set(H.exit[0], 0, H.exit[1]); hero.root.position.y = 0;
+  if (!H.act) return; if (H.exit) hero.root.position.set(H.exit[0], 0, H.exit[1]); hero.root.position.y = homeGroundAt(hero.root.position.x,hero.root.position.z);
   H.act = null; H.base = 'stand'; H.anim = null; H.mount = null; setProp(hero, null); steam.visible = false; if (H.state === 'act') H.state = 'idle'; syncSw();
 }
 function goAct(id, mode = 'preview') {
@@ -80,7 +81,7 @@ function goAct(id, mode = 'preview') {
   const host = hostOf(a); if (!host || (a.need && !furn.some(f => f.k === a.need))) { SFX.bad(); toast(`需要先在商店买「${CAT[a.host].n}」`); return false; }
   if (H.act === id && H.state === 'act') { H.mode = mode; syncUI(); if (id === 'letter' && pendingLetter) deliverLetter(); if (id === 'diary') makeDiary(false); return true; }
   leaveSeat(); const from = toWorld(host, ...(a.lf || a.lp)), p = hero.root.position, path = findPath(p.x, p.z, from[0], from[1]);
-  H.mode = mode; H.next = id; H.path = path || []; H.state = 'walk'; setCap('正走过去……'); hideBubble(); syncUI(); return true;
+  if(!path){toast('这件家具前面暂时过不去，请在摆放中留出通道。');return false;}H.mode = mode; H.next = id; H.path = path; H.state = 'walk'; setCap('正走过去……'); hideBubble(); syncUI(); return true;
 }
 function arrive() {
   if (H.next === 'social') { H.state = 'social'; return; }
@@ -88,7 +89,7 @@ function arrive() {
   H.exit = [p.x, p.z]; H.act = id; H.state = 'act'; H.t = 0; H.bubT = rnd(2.2, 3.6); H.fxT = .5; H.paid = false;
   if ((a.outfit || 'home') !== hero.outfit) { dress(a.outfit || 'home'); floater(p.clone().setY(1.3), '✦'); SFX.spark(); }
   const base = a.base || 'stand', y = base === 'sit' ? a.seat + .045 - hero.hipY : base === 'lie' ? a.y : base === 'sitFloor' ? (a.y0 || 0) + .07 - hero.hipY : a.y || 0, w = toWorld(host, ...(id === 'sleep' && hasMate() ? [-.38, .43] : a.lp));
-  H.mount = { fx: p.x, fz: p.z, t: 0, x: w[0], y, z: w[1] }; H.yaw = (host.r + a.yr) * D2R; H.base = base; H.anim = a.anim; setProp(hero, a.prop);
+  H.mount = { fx: p.x, fz: p.z, t: 0, fy:p.y, x: w[0], y:y+homeGroundAt(host.x,host.z), z: w[1] }; H.yaw = (host.r + a.yr) * D2R; H.base = base; H.anim = a.anim; setProp(hero, a.prop);
   syncSw();
   steam.visible = a.fx === 'steam'; if (a.at) steam.position.copy(new THREE.Vector3(...a.at).applyMatrix4(host.b.g.matrixWorld));
   { const ps = persOf(state.chara); H.first = H.mode === 'auto' ? null : ps.hate.includes(id) ? ps.no : ps.fav.includes(id) ? ps.yes : null; }
@@ -105,7 +106,7 @@ function updateHero(dt, time) {
     }
   } else if (H.state === 'act') {
     const a = ACTS[H.act], m = H.mount; H.t += dt;
-    if (m && m.t < 1) { m.t = Math.min(1, m.t + dt / .38); const k = m.t * m.t * (3 - 2 * m.t); r.position.set(lerp(m.fx, m.x, k), m.y * k + Math.sin(k * PI) * .12, lerp(m.fz, m.z, k)); }
+    if (m && m.t < 1) { m.t = Math.min(1, m.t + dt / .38); const k = m.t * m.t * (3 - 2 * m.t); r.position.set(lerp(m.fx, m.x, k), lerp(m.fy,m.y,k) + Math.sin(k * PI) * .12, lerp(m.fz, m.z, k)); }
     H.fxT -= dt;
     if (H.fxT <= 0 && a.fx) {
       const top = r.position.clone(); top.y += a.base === 'lie' ? .5 : 1.4;
@@ -117,15 +118,16 @@ function updateHero(dt, time) {
     if (!H.paid && H.t > 14) { H.paid = true; spawnBubble(r.position.clone().setY(r.position.y + 1.75), 15, true); }
     if (H.mode !== 'auto' && H.mode !== 'letter' && H.t > (H.act === 'diary' ? 40 : 150)) backToNow();
   }
+  if(H.state!=='act')r.position.y=homeGroundAt(r.position.x,r.position.z);
   let da = H.yaw - r.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); r.rotation.y += da * Math.min(1, dt * 9);
   poseRig(hero, dt, time, H.state === 'act' ? H.base : 'stand', H.state === 'act' ? H.anim : H.state === 'social' ? social.ha : edit.on ? 'wave' : null, walking);
 }
-function unstick(root) { if (isFree(root.position.x, root.position.z)) return; const c = nearestFree(root.position.x, root.position.z); if (c) root.position.set((c[0] + .5) * CELL, 0, (c[1] + .5) * CELL); }
+function unstick(root){if(!isFree(root.position.x,root.position.z)){const c=nearestFree(root.position.x,root.position.z);if(c)root.position.set((c[0]+.5)*CELL,0,(c[1]+.5)*CELL);}root.position.y=homeGroundAt(root.position.x,root.position.z);}
 
 /* ═════════════ the pet ═════════════ */
 const P = { state: 'nap', path: [], t: 6, walk: 0, yaw: 1.2 };
 const petBedF = () => furn.find(f => f.k === 'petBed');
-function petHome() { const b = petBedF(); if (!b) { petR.root.position.y = 0; unstick(petR.root); P.state = 'nap'; P.t = rnd(10, 20); P.path = []; return; } const w = toWorld(b, 0, .04); petR.root.position.set(w[0], .2, w[1]); P.state = 'nap'; P.t = rnd(14, 30); P.yaw = b.r * D2R + 1.2; P.path = []; }
+function petHome() { const b = petBedF(); if (!b) { petR.root.position.y = 0; unstick(petR.root); P.state = 'nap'; P.t = rnd(10, 20); P.path = []; return; } const w = toWorld(b, 0, .04); petR.root.position.set(w[0], .2+homeGroundAt(b.x,b.z), w[1]); P.state = 'nap'; P.t = rnd(14, 30); P.yaw = b.r * D2R + 1.2; P.path = []; }
 function petGo(x, z, then) { const p = petR.root.position, path = findPath(p.x, p.z, x, z); if (!path) { P.t = 2; return; } p.y = 0; P.path = path; P.state = 'walk'; P.then = then; }
 function petToBed() { const b = petBedF(); if (!b) return petGo(rnd(.5, HX - .5), rnd(.5, HZ - .5)); const w = toWorld(b, 0, .6); petGo(w[0], w[1], 'bed'); }
 function updatePet(dt, time) {
@@ -138,6 +140,7 @@ function updatePet(dt, time) {
     if (H.act === 'pet') { if (P.state !== 'nap') petToBed(); P.t = 5; }
     else if (P.t <= 0) { const q = Math.random(), hp = hero.root.position; if (q < .4) petGo(hp.x + rnd(-.7, .7), hp.z + rnd(-.7, .7)); else if (q < .7) petGo(rnd(.5, HX - .5), rnd(.5, HZ - .5)); else petToBed(); }
   }
+  if(P.state!=='nap')r.position.y=homeGroundAt(r.position.x,r.position.z);
   let da = P.yaw - r.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); r.rotation.y += da * Math.min(1, dt * 8);
   const nap = P.state === 'nap' && H.act !== 'pet'; petR.body.scale.y += ((nap ? .72 : 1) - petR.body.scale.y) * Math.min(1, dt * 5);
   petR.body.position.y = (P.state === 'walk' ? Math.abs(Math.sin(P.walk)) * .025 : 0) + (petR.hop > 0 ? Math.sin(Math.min(petR.hop, 1) * PI) * .16 : 0); if (petR.hop > 0) { petR.hop += dt * 4.5; if (petR.hop >= 1) petR.hop = 0; }
@@ -275,14 +278,14 @@ const PAIR = {
 };
 const SOLO = ['books', 'water', 'stretch', 'swing', 'sofa_read', 'wash', 'fridge', 'laundry', 'vanity', 'piano', 'paint', 'laze', 'cocoa', 'tea', 'arcade', 'run', 'jump', 'horse', 'camp', 'computer', 'pet'];
 const mateDress = (k = 'home') => buildChara(mateR, CHARS[state.mate], k);
-function mateLeave() { if (MM.state === 'act' && MM.exit) mateR.root.position.set(MM.exit[0], 0, MM.exit[1]); mateR.root.position.y = 0; MM.base = 'stand'; MM.anim = null; MM.mount = null; if (mateR.prop) setProp(mateR, null); MM.spec = null; MM.id = null; MM.state = 'idle'; syncSw(); }
-function mateGo(spec, id) { const host = hostOf(spec); if (!host) return false; mateLeave(); const from = toWorld(host, ...(spec.lf || spec.lp)), p = mateR.root.position; MM.path = findPath(p.x, p.z, from[0], from[1]) || []; MM.spec = spec; MM.id = id || null; MM.state = 'walk'; return true; }
+function mateLeave() { if (MM.state === 'act' && MM.exit) mateR.root.position.set(MM.exit[0], 0, MM.exit[1]); mateR.root.position.y = homeGroundAt(mateR.root.position.x,mateR.root.position.z); MM.base = 'stand'; MM.anim = null; MM.mount = null; if (mateR.prop) setProp(mateR, null); MM.spec = null; MM.id = null; MM.state = 'idle'; syncSw(); }
+function mateGo(spec, id) { const host = hostOf(spec); if (!host) return false; mateLeave(); const from = toWorld(host, ...(spec.lf || spec.lp)), p = mateR.root.position; const path=findPath(p.x,p.z,from[0],from[1]);if(!path)return false;MM.path=path; MM.spec = spec; MM.id = id || null; MM.state = 'walk'; return true; }
 function mateArrive() {
   const a = MM.spec, host = hostOf(a), p = mateR.root.position; if (!host) { MM.state = 'idle'; MM.spec = null; return; } MM.exit = [p.x, p.z]; MM.state = 'act'; MM.t = 0; MM.fxT = 1; MM.bubT = rnd(5, 9);
   if ((a.outfit || 'home') !== mateR.outfit) mateDress(a.outfit || 'home');
   const base = a.base || 'stand'; let w = toWorld(host, ...a.lp); if (base === 'stand' && !a.y) { const c = nearestFree(w[0], w[1]); if (c) w = [(c[0] + .5) * CELL, (c[1] + .5) * CELL]; }
   const y = base === 'sit' ? a.seat + .045 - mateR.hipY : base === 'lie' ? a.y : base === 'sitFloor' ? (a.y0 || 0) + .07 - mateR.hipY : a.y || 0;
-  MM.mount = { fx: p.x, fz: p.z, t: 0, x: w[0], y, z: w[1] }; MM.yaw = (host.r + a.yr) * D2R; MM.base = base; MM.anim = a.anim; setProp(mateR, a.prop); syncSw();
+  MM.mount = { fx: p.x, fz: p.z, t: 0, fy:p.y, x: w[0], y:y+homeGroundAt(host.x,host.z), z: w[1] }; MM.yaw = (host.r + a.yr) * D2R; MM.base = base; MM.anim = a.anim; setProp(mateR, a.prop); syncSw();
 }
 function mateThink() {
   if (!hasMate() || edit.on || social.on) return; MM.think = rnd(55, 95);
@@ -301,11 +304,12 @@ function updateMate(dt, time) {
     if (!MM.path.length) { if (MM.spec === 'social') MM.state = 'social'; else mateArrive(); }
     else { const [tx, tz] = MM.path[0], dx = tx - r.position.x, dz = tz - r.position.z, d = Math.hypot(dx, dz); if (d < .05) MM.path.shift(); else { const mv = Math.min(d, 1.1 * persOf(state.mate).speed * dt); r.position.x += dx / d * mv; r.position.z += dz / d * mv; MM.yaw = Math.atan2(dx, dz); } MM.walk += dt * 9.5; walking = MM.walk; }
   } else if (MM.state === 'act') {
-    const a = MM.spec, m = MM.mount; MM.t += dt; if (m && m.t < 1) { m.t = Math.min(1, m.t + dt / .38); const k = m.t * m.t * (3 - 2 * m.t); r.position.set(lerp(m.fx, m.x, k), m.y * k + Math.sin(k * PI) * .12, lerp(m.fz, m.z, k)); }
+    const a = MM.spec, m = MM.mount; MM.t += dt; if (m && m.t < 1) { m.t = Math.min(1, m.t + dt / .38); const k = m.t * m.t * (3 - 2 * m.t); r.position.set(lerp(m.fx, m.x, k), lerp(m.fy,m.y,k) + Math.sin(k * PI) * .12, lerp(m.fz, m.z, k)); }
     MM.fxT -= dt; if (MM.fxT <= 0 && a.fx === 'zzz') { floater(r.position.clone().setY(r.position.y + .5), 'z'); MM.fxT = 2.9; }
     MM.bubT -= dt; if (MM.bubT <= 0 && a.lines && bubMT <= 0) { sayM(MM.id ? lineFor(state.mate, a, MM.id) : pick(a.lines), 3.8); MM.bubT = rnd(14, 24) * persOf(state.mate).talk; }
   }
   if (MM.state !== 'social' && !social.on && !edit.on) { MM.think -= dt; if (MM.think <= 0) mateThink(); }
+  if(MM.state!=='act')r.position.y=homeGroundAt(r.position.x,r.position.z);
   let da = MM.yaw - r.rotation.y; da = Math.atan2(Math.sin(da), Math.cos(da)); r.rotation.y += da * Math.min(1, dt * 9);
   poseRig(mateR, dt, time, MM.state === 'act' ? MM.base : 'stand', MM.state === 'act' ? MM.anim : MM.state === 'social' ? social.ma : edit.on ? 'wave' : null, walking);
 }
@@ -429,16 +433,16 @@ function tickMeteor(dt) {
 /*__PLAY__*/
 /* ═════════════ camera ═════════════ */
 const view = { follow: true, wide: false, pause: 0, off: 0 };
-const closeDist = () => innerWidth / innerHeight < .8 ? 14 : 12;
-function wideDist() { const vf = camera.fov * D2R, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect); return Math.min(46, Math.max((HX * 1.25 + 2) / (2 * Math.tan(hf / 2)), (HZ + 6.5) / (2 * Math.tan(vf / 2)))); }
-function resize() { const w = innerWidth, h = innerHeight; camera.aspect = w / h; camera.setViewOffset(w, h, 0, view.off, w, h); camera.updateProjectionMatrix(); renderer.setSize(w, h, false); composer.setSize(w, h); }
+const closeDist = () => innerWidth / innerHeight < .8 ? 9 : 8;
+function wideDist() { const vf = camera.fov * D2R, hf = 2 * Math.atan(Math.tan(vf / 2) * camera.aspect); return Math.min(60, Math.max((HX * 1.25 + 2) / (2 * Math.tan(hf / 2)), (HZ + 6.5) / (2 * Math.tan(vf / 2)))); }
+function resize() { const w = innerWidth, h = innerHeight; camera.aspect = w / h;camera.fov=w/h<.8?38:28; camera.setViewOffset(w, h, 0, view.off, w, h); camera.updateProjectionMatrix(); renderer.setSize(w, h, false); composer.setSize(w, h); }
 function camDist(d, ms = 900) { const o = { d: camera.position.distanceTo(controls.target) }; new TWEEN.Tween(o).to({ d }, REDUCED ? 1 : ms).easing(TWEEN.Easing.Cubic.InOut).onUpdate(() => { const dir = camera.position.clone().sub(controls.target).normalize(); camera.position.copy(controls.target).addScaledVector(dir, o.d); }).start(); }
 function setViewOff(px) { const o = { v: view.off }; new TWEEN.Tween(o).to({ v: px }, REDUCED ? 1 : 350).easing(TWEEN.Easing.Cubic.Out).onUpdate(() => { view.off = o.v; camera.setViewOffset(innerWidth, innerHeight, 0, view.off, innerWidth, innerHeight); camera.updateProjectionMatrix(); }).start(); }
 const baseOff = () => innerWidth < 760 ? 95 : 70;
 controls.addEventListener('start', () => { view.pause = 1e12; }); controls.addEventListener('end', () => { view.pause = performance.now() + (edit.on ? 1e9 : 4500); });
 function followCam(dt) {
-  if (performance.now() < view.pause) { controls.target.x = clamp(controls.target.x, -.5, HX + .5); controls.target.z = clamp(controls.target.z, -.5, HZ + .5); controls.target.y = clamp(controls.target.y, 0, 1.5); return; }
-  const hp = hero.root.position, want = view.wide ? _v.set(HX / 2 - .3, .3, HZ / 2 - .2) : _v.set(hp.x, .7, hp.z), k = 1 - Math.exp(-dt * 2.6);
+  if (performance.now() < view.pause) { controls.target.x = clamp(controls.target.x, -.5, HX + .5); controls.target.z = clamp(controls.target.z, -.5, HZ + .5); controls.target.y = clamp(controls.target.y, 0, 3.5); return; }
+  const hp = hero.root.position, want = view.wide ? _v.set(HX / 2 - .3, homeScene(homeWorld.active).platform?.85:.3, HZ / 2 - .2) : _v.set(hp.x, hp.y+.7, hp.z), k = 1 - Math.exp(-dt * 2.6);
   const dx = (want.x - controls.target.x) * k, dy = (want.y - controls.target.y) * k, dz = (want.z - controls.target.z) * k; controls.target.x += dx; controls.target.y += dy; controls.target.z += dz; camera.position.x += dx; camera.position.y += dy; camera.position.z += dz;
 }
 
@@ -484,7 +488,7 @@ function renderSheet() {
     if (tab === 'b') { const ks = Object.keys(state.bag).filter(k => state.bag[k] > 0); h = ks.length ? `<div class="cards">${ks.map(k => card(k, true)).join('')}</div>` : '<p class="note">背包是空的。在“摆放”模式里选中买来的家具，可以把它收进这里。</p>'; }
     else { const ks = SHOP.filter(k => (tab === 'f') === !!CAT[k].base).sort((a, b) => CAT[a].price - CAT[b].price); h = `<p class="note" style="margin:0 0 8px">你有 <b>★ ${state.coins}</b>，家里现在 ${furn.length} 件家具。${tab === 'f' ? '过日子用的家具。每添一件，住客就多一件事可做。' : '好玩的和好看的。有些还能解锁小游戏。'}</p><div class="cards">${ks.map(k => card(k)).join('')}</div>`; }
   }
-  if (sheetName === 'style') h = `<div class="sec">配色</div><div class="cards">${THEMES.map((t, i) => { const lock = level() < t.lv; return `<button class="card${lock ? ' lock' : ''}" data-theme="${i}" aria-pressed="${i === state.theme}"><span class="sw">${['wall', 'acc', 'acc2', 'acc3', 'wood'].map(k => `<i style="background:${t.c[k]}"></i>`).join('')}</span><b>${t.n}</b><span>${lock ? `「${LVN[t.lv - 1]}」解锁` : i === state.theme ? '使用中' : '换上'}</span></button>`; }).join('')}</div>
+  if (sheetName === 'style') h = `<button class="btn alt" data-home="palette">恢复${homeScene(homeWorld.active).n}原色</button><div class="sec">配色</div><div class="cards">${THEMES.map((t, i) => { const lock = level() < t.lv; return `<button class="card${lock ? ' lock' : ''}" data-theme="${i}" aria-pressed="${i === state.theme}"><span class="sw">${['wall', 'acc', 'acc2', 'acc3', 'wood'].map(k => `<i style="background:${t.c[k]}"></i>`).join('')}</span><b>${t.n}</b><span>${lock ? `「${LVN[t.lv - 1]}」解锁` : i === state.theme ? '使用中' : '换上'}</span></button>`; }).join('')}</div>
     <div class="sec">天色</div>${optRow('time', [['auto', '跟随现实'], ['morning', '清晨'], ['day', '白天'], ['dusk', '黄昏'], ['night', '夜晚']], state.time)}<div class="sec">灯光</div>${optRow('light', [['auto', '天黑自动开'], ['on', '开灯'], ['off', '关灯']], state.light)}
     <div class="sec">窗外</div>${optRow('amb', [['auto', '跟随天气']].concat(Object.entries(AMB).map(([k, a]) => [k, a.n])), state.amb)}<div class="sec">声音</div>${optRow('music', [['1', '背景音乐开'], ['0', '背景音乐关']], state.music ? '1' : '0')}`;
   if (sheetName === 'foot') {
@@ -516,18 +520,18 @@ $('#sheetB').addEventListener('click', e => {
   if ((t = e.target.closest('[data-mate]'))) { setMate(+t.dataset.mate); renderSheet(); return; }
   if ((t = e.target.closest('[data-diary]'))) return openDiary(+t.dataset.diary);
   if (e.target.closest('[data-diarygo]')) { closeSheet(); if (!goAct('diary', 'preview')) makeDiary(false); return; }
-  if ((t = e.target.closest('[data-pet]'))) { const index=+t.dataset.pet;if(!Number.isInteger(index)||!PETS[index])return;const focus=t===document.activeElement;state.pet = index;state.petId=PETS[index].id;buildPet(petR, PETS[state.pet]);petR.hop = .01;PETS[state.pet].kind === 'dog' ? SFX.woof() : SFX.meow();save();renderSheet();if(focus)$(`[data-pet="${index}"]`).focus({preventScroll:true});return; }
+  if ((t = e.target.closest('[data-pet]'))) { const index=+t.dataset.pet;if(!Number.isInteger(index)||!PETS[index])return;const focus=t===document.activeElement;state.pet = index;state.petId=PETS[index].id;buildPet(petR, PETS[state.pet]);syncHomeUI();petR.hop = .01;PETS[state.pet].kind === 'dog' ? SFX.woof() : SFX.meow();save();renderSheet();if(focus)$(`[data-pet="${index}"]`).focus({preventScroll:true});return; }
   if ((t = e.target.closest('[data-wear]'))) return wear(t.dataset.wear, t.dataset.v);
   if ((t = e.target.closest('[data-dye]'))) return wear(t.dataset.dye, t.dataset.v);
   if ((t = e.target.closest('[data-buy]'))) return getItem(t.dataset.buy, !!t.dataset.bag);
   if ((t = e.target.closest('[data-claim]')) && !t.disabled) { const k = t.dataset.claim, task = TASKS.find(x => x.k === k), d = dayOf(); if (d[k] >= task.n && !d.claimed.includes(k)) { d.claimed.push(k); SFX.coin(); addCoins(task.c); toast(`领到 ★ ${task.c}`); refreshDots(); renderSheet(); } return; }
-  if ((t = e.target.closest('[data-theme]'))) { const i = +t.dataset.theme; if (level() < THEMES[i].lv) { SFX.bad(); return toast(`关系到「${LVN[THEMES[i].lv - 1]}」后解锁`); } state.theme = i; applyTheme(i); SFX.soft(); save(); renderSheet(); return; }
+  if ((t = e.target.closest('[data-theme]'))) { const i = +t.dataset.theme; if (level() < THEMES[i].lv) { SFX.bad(); return toast(`关系到「${LVN[THEMES[i].lv - 1]}」后解锁`); } state.theme = i;state.homes.rooms[homeWorld.active].theme=i; applyTheme(i); SFX.soft(); save(); renderSheet(); return; }
   if ((t = e.target.closest('[data-opt]'))) { const k = t.dataset.opt, v = t.dataset.v; if (k === 'music') state.music = v === '1'; else state[k] = v; if (k === 'time') setTime(timeKey()); if (k === 'amb' || k === 'time') applyWeather(); SFX.click(); save(); renderSheet(); return; }
   if ((t = e.target.closest('[data-replay]'))) { closeSheet(); goAct(t.dataset.replay, 'replay'); return; }
   if (e.target.closest('[data-reset]')) { if (!resetArm) { resetArm = true; renderSheet(); setTimeout(() => { resetArm = false; if (sheetName === 'foot') renderSheet(); }, 4000); return; } clearTimeout(saveT); try { localStorage.removeItem(KEY); } catch { } location.reload(); }
 });
-function setChara(i) { if (hasMate() && i === state.mate) { state.mate = state.chara; state.chara = i; mateDress(mateR.outfit || 'home'); } state.chara = i; const o = hero.outfit || 'home'; dress(o); if (H.state === 'act') { const a = ACTS[H.act]; if (a.base === 'sit') hero.root.position.y = a.seat + .045 - hero.hipY; } hero.hop = .01; SFX.spark(); renderWho(); say(CHARS[i].body === 'cloud' ? '噗。' : pick(['你好呀。', '嗯，我住这儿。', '今天也请多关照。']), 3.5); save(); }
-const timeKey = () => state.time === 'auto' ? autoTime() : state.time;
+function setChara(i) { if (hasMate() && i === state.mate) { state.mate = state.chara; state.chara = i; mateDress(mateR.outfit || 'home'); } state.chara = i; const o = hero.outfit || 'home'; dress(o); if (H.state === 'act') { const a = ACTS[H.act]; if (a.base === 'sit') hero.root.position.y = a.seat + .045 - hero.hipY+homeGroundAt(hero.root.position.x,hero.root.position.z); } hero.hop = .01; SFX.spark(); renderWho();syncHomeUI(); say(CHARS[i].body === 'cloud' ? '噗。' : pick(['你好呀。', '嗯，我住这儿。', '今天也请多关照。']), 3.5); save(); }
+const timeKey = () => state.time==='auto'?(homeWorld.active==='home'?autoTime():homeScene(homeWorld.active).time):state.time;
 $('#btnSound').onclick = () => { state.sound = !AU.on; AU.on = state.sound; if (AU.on) { audioStart(); SFX.pop(); } $('#btnSound').classList.toggle('off', !AU.on); save(); };
 $('#btnView').onclick = () => { audioStart(); SFX.click(); view.wide = !view.wide; view.pause = 0; camDist(view.wide ? wideDist() : closeDist()); if (!edit.on) toast(view.wide ? '全景' : '跟着住客'); };
 $('#btnFoot').onclick = () => { sheetTab.foot = state.mailNew ? 'l' : $('#dotFoot').hidden ? 'f' : 't'; openSheet('foot'); }; $('#btnPlay').onclick = () => openSheet('play'); $('#goal').onclick = () => { sheetTab.play = 'g'; openSheet('play'); }; $('#who').onclick = () => { sheetTab.foot = 'a'; openSheet('foot'); }; $('#coinChip').onclick = () => { sheetTab.shop = 'f'; openSheet('shop'); };
@@ -539,18 +543,18 @@ function photo() { ring.visible = false; composer.render(); let url = ''; try { 
 $('#btnPhoto').onclick = () => { audioStart(); photo(); };
 addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#veil').hidden) nextModal(); else if (sheetName) closeSheet(); else if (edit.on) setEdit(false); } if (edit.on && edit.sel && (e.key === 'r' || e.key === 'R')) $('#editbar [data-e="rot"]')?.click(); });
 addEventListener('resize', resize);
-document.addEventListener('visibilitychange', () => { if (document.hidden) { state.furn = furn.map(f => ({ u: f.uid, k: f.k, x: f.x, z: f.z, r: f.r })); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { captureHomeState(); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { } } });
 
 /* pointer: taps pat or send the resident somewhere; in arrange mode they select and drag furniture */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let tap = null;
-function pick3(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const hit = ray.intersectObjects(edit.on ? [houseRoot] : [...(G_.on ? [gift] : []), hero.root, ...(hasMate() ? [mateR.root] : []), petR.root, houseRoot], true)[0]; if (!hit) return null; let o = hit.object; while (o && !o.userData.ent && !o.userData.furn) o = o.parent; return o ? (o.userData.ent || o.userData.furn) : null; }
+function pick3(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const hit = ray.intersectObjects(edit.on ? [houseRoot] : [...(G_.on ? [gift] : []), hero.root, ...(hasMate() ? [mateR.root] : []), petR.root, houseRoot], true)[0]; if (!hit) return null; let o = hit.object; while (o && !o.userData.ent && !o.userData.furn && !o.userData.feature) o = o.parent; return o ? (o.userData.ent || o.userData.furn || o.userData.feature) : null; }
 function pickFurn(x, y) {   // in arrange mode a tap anywhere on a footprint counts, so thin pieces are easy to grab
   const o = pick3(x, y); if (o && o.k && !CAT[o.k].walk) return o; const p = floorAt(x, y); if (!p) return o && o.k ? o : null;
   const inside = furn.filter(f => { const r = rectOf(f); return p[0] > r.x0 - .1 && p[0] < r.x1 + .1 && p[1] > r.z0 - .1 && p[1] < r.z1 + .1; }).sort((a, b) => (CAT[a.k].walk ? 1 : 0) - (CAT[b.k].walk ? 1 : 0) || fpOf(a)[0] * fpOf(a)[1] - fpOf(b)[0] * fpOf(b)[1]);
   return inside[0] || (o && o.k ? o : null);
 }
 function overSel(x, y) { const f = edit.sel; if (!f) return false; if (pick3(x, y) === f) return true; const p = floorAt(x, y), r = rectOf(f); return !!p && p[0] > r.x0 - .15 && p[0] < r.x1 + .15 && p[1] > r.z0 - .15 && p[1] < r.z1 + .15; }
-function floorAt(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const o = ray.ray.origin, d = ray.ray.direction; if (Math.abs(d.y) < 1e-5) return null; const t = -o.y / d.y; return t > 0 ? [o.x + d.x * t, o.z + d.z * t] : null; }
+function floorAt(x, y) { ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); const o = ray.ray.origin, d = ray.ray.direction; if (Math.abs(d.y) < 1e-5) return null; const elevation=edit.on&&edit.sel?homeGroundAt(edit.sel.x,edit.sel.z):0;const t=(elevation-o.y)/d.y; return t > 0 ? [o.x + d.x * t, o.z + d.z * t] : null; }
 handlers.down = e => {
   audioStart(); tap = { x: e.clientX, y: e.clientY, t: e.timeStamp, id: e.pointerId };
   if (edit.on && overSel(e.clientX, e.clientY)) { const p = floorAt(e.clientX, e.clientY), f = edit.sel; controls.enabled = false; try { canvas.setPointerCapture(e.pointerId); } catch { } edit.drag = { f, x0: f.x, z0: f.z, ox: p ? p[0] - f.x : 0, oz: p ? p[1] - f.z : 0, ok: true, moved: false, id: e.pointerId }; }
@@ -565,6 +569,7 @@ function endPointer(e) {
   if (!tap || e.pointerId !== tap.id) return; const t = tap; tap = null; if (e.type !== 'pointerup' || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 7 || e.timeStamp - t.t > 600) return;
   if (edit.on) return selectF(pickFurn(e.clientX, e.clientY));
   const o = pick3(e.clientX, e.clientY);
+  if(o?.label)return homeFeatureTap(o);
   if (o === 'hero' && evPend) return openEvent();
   if (o === 'hero') { hero.hop = .01; SFX.pop(); floater(hero.root.position.clone().setY(hero.root.position.y + 1.5), '♥'); if (H.act !== 'sleep') say(CHARS[state.chara].body === 'cloud' ? pick(['噗？', '呼——', '(软软地晃了晃)']) : pick(['嗯？', '(抬头看了你一眼)', '在呢。', '别闹。', '(笑了一下)']), 3); if (count('pat', 10)) addAff(2); return; }
   if (o === 'gift') return openGift();
@@ -587,8 +592,7 @@ async function thumbs(progress) {
 async function boot() {
   const bar = $('#loadBar'); $('#loader').style.backgroundImage = `linear-gradient(rgba(250,244,234,.25),rgba(250,244,234,.7)),url(${ART.scene})`; applyTheme(state.theme, false); bar.style.width = '12%'; await nextFrame();
   await thumbs(k => { bar.style.width = 12 + k * 60 + '%'; });
-  const coreIds = new Set(LAYOUT.map(l => l[0]));
-  if (state.furn && state.furn.length) { for (const s of state.furn) if (CAT[s.k]) addFurn(s.u, s.k, s.x, s.z, s.r, coreIds.has(s.u)); for (const l of LAYOUT) if (!furn.some(f => f.uid === l[0])) addFurn(l[0], l[1], l[2], l[3], l[4], true); } else for (const l of LAYOUT) addFurn(l[0], l[1], l[2], l[3], l[4], true);
+  state.journey.room=state.homes.active;prepareHomeScene(state.homes.active);
   rebuildNav();
   buildChara(hero, CHARS[state.chara], 'home'); buildPet(petR, PETS[state.pet]); hero.root.position.set(5.6, 0, 5.9); unstick(hero.root); petR.root.position.set(4.6, 0, 6.6); petHome(); todayOf(); state.day.duo ??= 0; if (hasMate()) { mateDress('home'); mateR.root.visible = true; mateR.root.position.set(6.6, 0, 5.4); unstick(mateR.root); }
   setTime(timeKey(), false); applyWeather(); lights.k = state.light === 'on' || (state.light === 'auto' && env.night > .4) ? 1 : 0; refreshLamps();
@@ -600,10 +604,10 @@ async function boot() {
   renderer.setAnimationLoop(now => {
     const raw = (now - last) / 1000, dt = Math.min(.05, raw), time = now / 1000; last = now; if (voyage.on || document.hidden) return; watchPerf(raw); TWEEN.update(now);
     const lk = state.light === 'on' ? 1 : state.light === 'off' ? 0 : env.night > .4 ? 1 : 0; if (Math.abs(lk - lights.k) > .003) { lights.k += (lk - lights.k) * Math.min(1, dt * 3); applyLights(); }
-    if (REF.tv.userData.sw) { REF.tv.emissive.setHSL((time * .07) % 1, .35, .6); REF.tv.emissiveIntensity = 1.2 + Math.sin(time * 9) * .15; }
+    if (REF.tv?.userData.sw) { REF.tv.emissive.setHSL((time * .07) % 1, .35, .6); REF.tv.emissiveIntensity = 1.2 + Math.sin(time * 9) * .15; }
     if (H.mode === 'auto' && !edit.on && !social.on) { auto.t -= dt; if (auto.t <= 0 && H.state === 'act' || auto.block !== blockAt(nowH())) autoPick(auto.t <= 0); }
     minuteT += dt; if (minuteT > 30) { minuteT = 0; if (state.time === 'auto') setTime(timeKey()); applyWeather(); }
-    updateHero(dt, time); updateMate(dt, time); updatePet(dt, time); updateSpacing(dt); tickSocial(dt, time); tickEvent(dt); tickSteam(time); tickDrift(dt, time); tickCoins(dt); tickGift(dt, time); tickMeteor(dt);
+    updateHero(dt, time); updateMate(dt, time); updatePet(dt, time); updateSpacing(dt);tickHomeScene(dt,time); tickSocial(dt, time); tickEvent(dt); tickSteam(time); tickDrift(dt, time); tickCoins(dt); tickGift(dt, time); tickMeteor(dt);
     if (H.mode === 'auto' && hasMate() && !edit.on && !social.on) { soT -= dt; if (soT <= 0) { soT = rnd(150, 240); if (H.act !== 'sleep' && !sheetName) startSocial(pick(['chat', 'chat', 'hi5', 'hug', 'rps', 'dance'])); } }
     if (edit.sel && !edit.drag) { ring.material.opacity = .5 + Math.sin(time * 4) * .15; edit.sel.b.g.position.y = Math.abs(Math.sin(time * 3)) * .03; }
     for (const c of clouds) { const u = c.userData; if (u.back) { c.position.x += u.v * dt; if (c.position.x > 34) c.position.x = -28; } else { c.position.z += u.v * dt; if (c.position.z > 34) c.position.z = -28; } }
@@ -612,6 +616,6 @@ async function boot() {
   await nextFrame(); await nextFrame(); $('#loader').classList.add('done'); setTimeout(() => $('#loader').remove(), 700);
   renderWho(); state.first = false; save(); checkGoals(); initJourney();
 }
-if (location.protocol === 'file:' || new URLSearchParams(location.search).has('test')) window.__home = { get state() { return state; }, voyage, jRoom, jProgress, jTravel, jApply, jRender, jEnter, jHome, jStartGame, jGameFinish, save, sim(n) { let t = performance.now() / 1000; for (let i = 0; i < n; i++) { t += .05; updateHero(.05, t); updateMate(.05, t); updatePet(.05, t); updateSpacing(.05); tickSocial(.05, t); tickGift(.05, t); updateFloating(.05); } }, mini, startMini, endMini, closeMini, bloom, composer, renderer, scene, drift, wideDist, meteor, moon, stars, confetti, steam, clouds, THREE, gift, houseRoot, checkGoals, grantMemo, charaNote, openEvent, EVENTS, GOALS, FISH, BB, bubble, bubbleM, say, sayM, applyWeather, setEv(e) { evPend = e; }, get wx() { return wx; }, MM, social, startSocial, setMate, makeDiary, localDiary, openGift, G_, MT_, gift, mateR, H, P, hero, petR, goAct, ACTS, furn, CAT, edit, setEdit, selectF, camera, controls, toScreen, view, env, addAff, addCoins, findPath, nearestFree, toWorld, hostOf, getItem, canPlace, warp(id) { state.aff = Math.max(state.aff, 300); if (!goAct(id)) return false; const a = ACTS[id], f = toWorld(hostOf(a), ...(a.lf || a.lp)), w = toWorld(hostOf(a), ...a.lp), c = nearestFree(f[0], f[1]); hero.root.position.set((c[0] + .5) * .2, 0, (c[1] + .5) * .2); H.path = []; controls.target.set(w[0], .7, w[1]); camera.position.copy(controls.target).addScaledVector(new THREE.Vector3(1, .98, 1.08).normalize(), 7); view.pause = 1e12; return true; } };
+if (location.protocol === 'file:' || new URLSearchParams(location.search).has('test')) window.__home = { get state() { return state; }, voyage,homeWorld,homeGroundAt,switchHome,captureHomeState, jRoom, jProgress, jTravel, jApply, jRender, jEnter, jHome, jStartGame, jGameFinish, save, sim(n) { let t = performance.now() / 1000; for (let i = 0; i < n; i++) { t += .05; updateHero(.05, t); updateMate(.05, t); updatePet(.05, t); updateSpacing(.05); tickSocial(.05, t); tickGift(.05, t); updateFloating(.05); } }, mini, startMini, endMini, closeMini, bloom, composer, renderer, scene, drift, wideDist, meteor, moon, stars, confetti, steam, clouds, THREE, gift, houseRoot, checkGoals, grantMemo, charaNote, openEvent, EVENTS, GOALS, FISH, BB, bubble, bubbleM, say, sayM, applyWeather, setEv(e) { evPend = e; }, get wx() { return wx; }, MM, social, startSocial, setMate, makeDiary, localDiary, openGift, G_, MT_, gift, mateR, H, P, hero, petR, goAct, ACTS, furn, CAT, edit, setEdit, selectF, camera, controls, toScreen, view, env, addAff, addCoins, findPath, nearestFree, toWorld, hostOf, getItem, canPlace, warp(id) { state.aff = Math.max(state.aff, 300); if (!goAct(id)) return false; const a = ACTS[id], f = toWorld(hostOf(a), ...(a.lf || a.lp)), w = toWorld(hostOf(a), ...a.lp), c = nearestFree(f[0], f[1]); hero.root.position.set((c[0] + .5) * .2, 0, (c[1] + .5) * .2); H.path = []; controls.target.set(w[0], .7, w[1]); camera.position.copy(controls.target).addScaledVector(new THREE.Vector3(1, .98, 1.08).normalize(), 7); view.pause = 1e12; return true; } };
 boot().catch(err => { console.error(err); if ($('#loadMsg')) $('#loadMsg').textContent = '加载出错了：' + err.message; });
 </script>
